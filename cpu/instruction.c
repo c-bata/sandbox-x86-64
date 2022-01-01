@@ -213,13 +213,13 @@ static void push_imm32(Emulator *emu) {
 
 static void push_imm8(Emulator *emu) {
     uint8_t value = get_code8(emu, 1);
-    push32(emu, value);
+    push64(emu, value);
     emu->rip += 2;
 }
 
 static void pop_r64(Emulator* emu) {
     uint8_t reg = get_code8(emu, 0) - 0x58;
-    set_register32(emu, reg, pop32(emu));
+    set_register64(emu, reg, pop64(emu));
     emu->rip += 1;
 }
 

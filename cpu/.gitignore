@@ -1,4 +1,3 @@
 cpu
 *.bin
-test/expected.txt
-test/actual.txt
+test/emulator-log.txt

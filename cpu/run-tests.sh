@@ -1,36 +1,24 @@
 #!/bin/bash
 
 emulator="./cpu"
-expected="test/expected.txt"
-actual="test/actual.txt"
+log="test/emulator-log.txt"
 
-assert_regs() {
-  local testname="$1"
+assert_exit_status() {
+  local bin_file="$1"
+  local expected="$2"
+  local actual="$3"
 
-  message=$(diff <(cat $actual | tail -n 9) <(cat $expected | tail -n 9))
-  if [ "$?" == 0 ]; then
-    echo "[passed] $testname"
-    exit 0
+  if [ $actual == $expected ]; then
+    echo "[passed] $bin_file"
   else
-    echo "[failed] $testname $message"
-    exit 1
+    echo "[failed] $bin_file expected $expected != actual $3"
+    ndisasm -b 64 $bin_file
   fi
 }
 
 # hello.asm
-cat > $expected <<- EOF
-EAX = 00000029
-ECX = 00000000
-EDX = 00000000
-EBX = 00000000
-ESP = 00007c00
-EBP = 00000000
-ESI = 00000000
-EDI = 00000000
-EIP = 00000000
-EOF
 bin_file="test/hello.bin"
-$emulator $bin_file 2> $actual
-assert_regs $bin_file
+$emulator $bin_file 2> $log
+assert_exit_status $bin_file 20 $?
 
 echo Done

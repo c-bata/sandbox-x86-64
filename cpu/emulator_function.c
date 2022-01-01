@@ -34,6 +34,13 @@ void set_memory32(Emulator* emu, uint32_t address, uint32_t value) {
     }
 }
 
+void set_memory64(Emulator* emu, uint64_t address, uint64_t value) {
+    int i;
+    for (i = 0; i<8; i++) {
+        set_memory8(emu, address+i, value >> (i*8));
+    }
+}
+
 uint32_t get_memory8(Emulator* emu, uint32_t address) {
     return (uint32_t) emu->memory[address];
 }
@@ -47,7 +54,21 @@ uint32_t get_memory32(Emulator* emu, uint32_t address) {
     return ret;
 }
 
+uint64_t get_memory64(Emulator* emu, uint64_t address) {
+    int i;
+    uint64_t ret = 0;
+    for (i=0; i<8; i++) {
+        ret |= get_memory8(emu, address+i) << (i*8);
+    }
+    return ret;
+}
+
+// TODO: should be removed
 uint32_t get_register32(Emulator* emu, int index) {
+    return emu->registers[index];
+}
+
+uint64_t get_register64(Emulator* emu, int index) {
     return emu->registers[index];
 }
 
@@ -90,16 +111,33 @@ void set_register32(Emulator* emu, int index, uint32_t value) {
     emu->registers[index] = value;
 }
 
+void set_register64(Emulator* emu, int index, uint64_t value) {
+    emu->registers[index] = value;
+}
+
+// TODO: should be removed.
 void push32(Emulator* emu, uint32_t value) {
     uint32_t  address = get_register32(emu, RSP) - 4;
     set_register32(emu, RSP, address);
     set_memory32(emu, address, value);
 }
-
 uint32_t pop32(Emulator* emu) {
     uint32_t address = get_register32(emu, RSP);
     uint32_t ret = get_memory32(emu, address);
     set_register32(emu, RSP, address + 4);
+    return ret;
+}
+
+void push64(Emulator* emu, uint64_t value) {
+    uint64_t address = get_register64(emu, RSP) - 8;
+    set_register64(emu, RSP, address);
+    set_memory64(emu, address, value);
+}
+
+uint64_t pop64(Emulator* emu) {
+    uint32_t address = get_register64(emu, RSP);
+    uint32_t ret = get_memory64(emu, address);
+    set_register64(emu, RSP, address + 8);
     return ret;
 }
 
