@@ -232,102 +232,100 @@ static void rex_prefix(Emulator* emu) {
     // uint16_t x = (wrxb & 0x02) >> 1;
     // uint16_t b = (wrxb & 0x01);
 
-    if (w) {
-        // 64-bit mode
-        uint8_t rex_opcode1 = get_code8(emu, 0);
-        uint8_t rex_opcode2 = 0;
-        emu->rip += 1;
-
-        ModRM modrm;
-        if (rex_opcode1 == 0x0F) {
-            rex_opcode2 = get_code8(emu, 0);
-            emu->rip += 1;
-        } else if (rex_opcode1 != 0x99) {  // != cqo
-            parse_modrm(emu, &modrm);
-            // reg = (r << 3) | modrm.reg_index;
-            // mod = modrm.mod;
-            // rm = (b << 3) | modrm.rm;
-            // scale = modrm.scale;
-            // index = (x << 3) | modrm.index;
-            // base = (b << 3) | modrm.base;
-        }
-
-        if (rex_opcode1 == 0x01) {
-            // 48 00 F8 => add rax, rdi
-            uint8_t reg = (r << 3) | modrm.reg_index;
-            uint64_t v1 = get_register64(emu, RAX);
-            uint64_t v2 = get_register64(emu, reg);
-            set_register64(emu, RAX, v1 + v2);
-        } else if (rex_opcode1 == 0x0F) {
-            uint8_t oprand = get_code8(emu, 0);
-            emu->rip += 1;
-
-            // TODO: What 'oprand & 0xF0' means?
-            uint8_t reg = oprand & 0x0F;
-
-            uint64_t result;
-            switch (rex_opcode2) {
-                case 0xAF:
-                    // 48 0F AF C7 => imul rax, rdi
-                    // TODO: set overflow values into RDX.
-                    result = get_register64(emu, RAX) * get_register64(emu, reg);
-                    set_register64(emu, RAX, result);
-                    break;
-                case 0xB6:
-                    // 48 0F B6 C0 => movzx rax, al
-                    result = get_register8(emu, reg);
-                    set_register64(emu, RAX, result);
-                    break;
-                default:
-                    printf("not implemented: rex_prefix=%02x / w=1 rex_opcode=%02x%02x\n",
-                           0x40 + wrxb, rex_opcode1, rex_opcode2);
-                    exit(1);
-            }
-        } else if (rex_opcode1 == 0x29) {
-            // 48 29 F8 => sub rax, rdi
-            uint8_t reg = (r << 3) | modrm.reg_index;
-            uint64_t v1 = get_register64(emu, RAX);
-            uint64_t v2 = get_register64(emu, reg);
-            set_register64(emu, RAX, v1 - v2);
-        } else if (rex_opcode1 == 0x39) {
-            // 48 39 F8 => cmp rax, rdi
-            uint8_t reg = (r << 3) | modrm.reg_index;
-            uint64_t v1 = get_register64(emu, RAX);
-            uint64_t v2 = get_register64(emu, reg);
-            int is_carry = 0; // TODO: Please fix here.
-            update_rflags_sub(emu, v1, v2, v1-v2, is_carry);
-        } else if (rex_opcode1 == 0x89) {
-            // 48 89 C8 => sub rax, rdi
-            uint8_t reg = (r << 3) | modrm.reg_index;
-            uint64_t value = get_register64(emu, reg);
-            set_register64(emu, RAX, value);
-        } else if (rex_opcode1 == 0x99) {
-            // 48 99 => cqo
-            // TODO: Must expand rax value to 128 register (RDX, RAX)
-            // uint64_t rax = get_register64(emu, RAX);
-            // set_register64(emu, RAX, rax & 0x7FFFFFFF);
-            // set_register64(emu, RDX, (rax & 0x8FFFFFFF) >> 63);
-            set_register64(emu, RDX, 0);
-        } else if (rex_opcode1 == 0xF7) {
-            // 48 F7 FF => idiv rdi
-            uint8_t reg = (r << 3) | modrm.reg_index;
-            // TODO: Must calculate "(RDX, RAX) / rm64"
-            // uint64_t v1h = get_register64(emu, RDX);
-            int64_t v1l = get_register64(emu, RAX);
-            int64_t v2 = get_register64(emu, reg);
-
-            uint64_t q = v1l / v2;
-            uint64_t rem = v1l % v2;
-            set_register64(emu, RAX, q);
-            set_register64(emu, RDX, rem);
-        } else {
-            printf("not implemented: rex_prefix=%02x / w=1 rex_opcode=%02x\n",
-                   0x40 + wrxb, rex_opcode1);
-            exit(1);
-        }
-    } else {
+    if (!w) {
         // 32-bit mode
         printf("not implemented: rex_prefix=%02x / w=0\n", 0x40 + wrxb);
+        exit(1);
+    }
+
+    // 64-bit mode
+    uint16_t po = get_code8(emu, 0); // primary opcode
+    emu->rip += 1;
+
+    // Primary opcode only
+    if (po == 0x99) {
+        // 48 99 => cqo
+        // TODO: Must expand rax value to 128 register (RDX, RAX)
+        // uint64_t rax = get_register64(emu, RAX);
+        // set_register64(emu, RAX, rax & 0x7FFFFFFF);
+        // set_register64(emu, RDX, (rax & 0x8FFFFFFF) >> 63);
+        set_register64(emu, RDX, 0);
+        return;
+    }
+
+    // Primary opcode + Secondary opcode (No ModR/M)
+    if (po == 0x0F) {
+        uint16_t so = get_code8(emu, 0);  // secondary opcode
+        uint8_t oprand = get_code8(emu, 1);
+        emu->rip += 2;
+
+        // TODO: What 'oprand & 0xF0' means?
+        uint8_t reg = oprand & 0x0F;
+
+        uint64_t result;
+        switch (so) {
+            case 0xAF:
+                // 48 0F AF C7 => imul rax, rdi
+                // TODO: set overflow values into RDX.
+                result = get_register64(emu, RAX) * get_register64(emu, reg);
+                set_register64(emu, RAX, result);
+                break;
+            case 0xB6:
+                // 48 0F B6 C0 => movzx rax, al
+                result = get_register8(emu, reg);
+                set_register64(emu, RAX, result);
+                break;
+            default:
+                printf("not implemented: rex_prefix=%02x / w=1 rex_opcode=%02x%02x\n",
+                       0x40 + wrxb, po, so);
+                exit(1);
+        }
+        return;
+    }
+
+    // Primary opcode + ModR/M
+    ModRM modrm;
+    parse_modrm(emu, &modrm);
+    uint8_t reg = (r << 3) | modrm.reg_index;
+    // mod = modrm.mod;
+    // rm = (b << 3) | modrm.rm;
+    // scale = modrm.scale;
+    // index = (x << 3) | modrm.index;
+    // base = (b << 3) | modrm.base;
+    if (po == 0x01) {
+        // 48 00 F8 => add rax, rdi
+        uint64_t v1 = get_register64(emu, RAX);
+        uint64_t v2 = get_register64(emu, reg);
+        set_register64(emu, RAX, v1 + v2);
+    } else if (po == 0x29) {
+        // 48 29 F8 => sub rax, rdi
+        uint64_t v1 = get_register64(emu, RAX);
+        uint64_t v2 = get_register64(emu, reg);
+        set_register64(emu, RAX, v1 - v2);
+    } else if (po == 0x39) {
+        // 48 39 F8 => cmp rax, rdi
+        uint64_t v1 = get_register64(emu, RAX);
+        uint64_t v2 = get_register64(emu, reg);
+        int is_carry = 0; // TODO: Please fix here.
+        update_rflags_sub(emu, v1, v2, v1-v2, is_carry);
+    } else if (po == 0x89) {
+        // 48 89 C8 => sub rax, rdi
+        uint64_t value = get_register64(emu, reg);
+        set_register64(emu, RAX, value);
+    } else if (po == 0xF7) {
+        // 48 F7 FF => idiv rdi
+        // TODO: Must calculate "(RDX, RAX) / rm64"
+        // uint64_t v1h = get_register64(emu, RDX);
+        int64_t v1l = get_register64(emu, RAX);
+        int64_t v2 = get_register64(emu, reg);
+
+        uint64_t q = v1l / v2;
+        uint64_t rem = v1l % v2;
+        set_register64(emu, RAX, q);
+        set_register64(emu, RDX, rem);
+    } else {
+        printf("not implemented: rex_prefix=%02x / w=1 rex_opcode=%02x\n",
+               0x40 + wrxb, po);
         exit(1);
     }
 }
