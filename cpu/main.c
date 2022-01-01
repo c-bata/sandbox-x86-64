@@ -11,7 +11,10 @@
 #define MEMORY_SIZE (1024 * 1024)
 
 bool quiet = false;
-char* registers_name[] = {"RAX", "RCX", "RDX", "RBX", "RSP", "RBP", "RSI", "RDI"};
+char* registers_name[] = {
+        "RAX", "RCX", "RDX", "RBX", "RSP", "RBP", "RSI", "RDI",
+        "R8", "R9", "R10", "R11", "R12", "R13", "R14", "R15"
+};
 
 void debugf(char *fmt, ...) {
     if (quiet) {
@@ -93,7 +96,7 @@ int main(int argc, char* argv[]) {
 
     while (emu->rip < MEMORY_SIZE) {
         uint8_t code = get_code8(emu, 0);
-        debugf("EIP = %X, Code = %02X\n", emu->rip, code);
+        debugf("RIP = %X, Code = %02X\n", emu->rip, code);
 
         if (instructions[code] == NULL) {
             printf("\n\nNot Implemented: %x\n", code);

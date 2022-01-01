@@ -11,7 +11,10 @@ typedef struct {
     };
     uint8_t rm;
 
-    uint8_t sib;
+    // sib
+    uint8_t scale;
+    uint8_t index;
+    uint8_t base;
     union {
         int8_t disp8;
         uint32_t disp32;

@@ -93,12 +93,6 @@ static void cmp_al_imm8(Emulator* emu) {
     // emu->rip += 2;
 }
 
-static void inc_r32(Emulator* emu) {
-    // uint8_t reg = get_code8(emu, 0) - 0x40;
-    // set_register32(emu, reg, get_register32(emu, reg) + 1);
-    // emu->rip += 1;
-}
-
 static void add_rm32_imm8(Emulator* emu, ModRM* modrm) {
     // uint32_t rm32 = get_rm32(emu, modrm);
     // uint32_t imm8 = (int32_t)get_sign_code8(emu, 0);
@@ -199,10 +193,60 @@ void near_jump(Emulator *emu) {
     emu->rip += diff + 5;  // diff + oprand(1 byte) + opcode(4 bytes)
 }
 
-static void push_r32(Emulator *emu) {
-    // uint8_t reg = get_code8(emu, 0) - 0x50;
-    // push32(emu, get_register32(emu, reg));
-    // emu->rip += 1;
+static void rex_prefix(Emulator* emu) {
+    uint8_t wrxb = get_code8(emu, 0) - 0x40;
+    emu->rip += 1;
+    uint8_t w = (wrxb & 0x08) >> 3;
+    uint8_t r = (wrxb & 0x04) >> 2;
+    // uint16_t x = (wrxb & 0x02) >> 1;
+    // uint16_t b = (wrxb & 0x01);
+
+    if (w) {
+        // 64-bit mode
+        uint8_t rex_opcode = get_code8(emu, 0);
+        emu->rip += 1;
+
+        ModRM modrm;
+        parse_modrm(emu, &modrm);
+        uint8_t reg = (r << 3) | modrm.reg_index;
+        // mod = modrm.mod;
+        // rm = (b << 3) | modrm.rm;
+        // scale = modrm.scale;
+        // index = (x << 3) | modrm.index;
+        // base = (b << 3) | modrm.base;
+
+        if (rex_opcode == 0x01) {
+            // TODO: support another register.
+            // 48 00 F8 => add rax, rdi
+            uint64_t v1 = get_register64(emu, RAX);
+            uint64_t v2 = get_register64(emu, reg);
+            set_register64(emu, RAX, v1 + v2);
+        } else if (rex_opcode == 0x29) {
+            // TODO: support another register.
+            // 48 29 F8 => sub rax, rdi
+            uint64_t v1 = get_register64(emu, RAX);
+            uint64_t v2 = get_register64(emu, reg);
+            set_register64(emu, RAX, v1 - v2);
+        } else if (rex_opcode == 0x89) {
+            // TODO: support another register.
+            // 48 89 C8 => sub rax, rdi
+            uint64_t value = get_register64(emu, reg);
+            set_register64(emu, RAX, value);
+        } else {
+            printf("not implemented: rex_prefix=%x / w=1 rex_opcode=%d\n", 0x40 + wrxb, rex_opcode);
+            exit(1);
+        }
+    } else {
+        // 32-bit mode
+        printf("not implemented: rex_prefix=%d / w=0\n", 0x40 + wrxb);
+        exit(1);
+    }
+}
+
+static void push_r64(Emulator *emu) {
+    uint8_t reg = get_code8(emu, 0) - 0x50;
+    push64(emu, get_register64(emu, reg));
+    emu->rip += 1;
 }
 
 static void push_imm32(Emulator *emu) {
@@ -273,12 +317,12 @@ void init_instructions(void) {
     instructions[0x3B] = cmp_r32_rm32;
     instructions[0x3C] = cmp_al_imm8;
 
-    for (i=0; i<8; i++) {
-        instructions[0x40+i] = inc_r32;
+    for (i=0; i<16; i++) {
+        instructions[0x40+i] = rex_prefix;
     }
 
     for (i=0; i<8; i++) {
-        instructions[0x50 + i] = push_r32;
+        instructions[0x50 + i] = push_r64;
     }
     for (i=0; i<8; i++) {
         instructions[0x58 + i] = pop_r64;

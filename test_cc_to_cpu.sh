@@ -12,7 +12,7 @@ assert() {
   local expected="$1"
   local input="$2"
 
-  $compiler $input > $asm_file
+  $compiler "$input" > $asm_file
   nasm -f bin -o $bin_file $asm_file
   $cpu $bin_file 2> $log_file
   local actual=$?
@@ -28,5 +28,8 @@ assert() {
 # Note that an exit status code must be 0~255 in UNIX.
 assert 0 0
 assert 42 42
+assert 21 '5+20-4'
+assert 21 '5 + 20 -  4 '
+assert 41 ' 12 + 34 - 5 '
 
 echo Done
