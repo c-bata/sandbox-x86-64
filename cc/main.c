@@ -5,8 +5,20 @@
 #include <string.h>
 #include <ctype.h>
 
-// TODO(c-bata): Add a command line option
-bool emu_mode = true;
+bool emu_mode = false;
+
+int opt_remove_at(int argc, char* argv[], int index) {
+    if (index < 0 || argc <= index) {
+        return argc;
+    } else {
+        int i = index;
+        for (; i<argc-1; i++) {
+            argv[i] = argv[i+1];
+        }
+        argv[i] = NULL;
+        return argc -1;
+    }
+}
 
 typedef enum {
     TK_RESERVED, // symbol
@@ -337,6 +349,16 @@ void gen(Node* node) {
 }
 
 int main(int argc, char **argv) {
+    int i = 1;
+    while (i < argc) {
+        if (strcmp(argv[i], "--cpuemu") == 0) {
+            emu_mode = true;
+            argc = opt_remove_at(argc, argv, i);
+        } else {
+            i++;
+        }
+    }
+
     if (argc != 2) {
         error("error: no input program.");
     }

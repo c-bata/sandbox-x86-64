@@ -23,11 +23,11 @@ int32_t get_sign_code32(Emulator* emu, int index) {
     return (int32_t) get_code32(emu, index);
 }
 
-void set_memory8(Emulator* emu, uint32_t address, uint32_t value) {
+void set_memory8(Emulator* emu, uint64_t address, uint64_t value) {
     emu->memory[address] = value & 0xFF;
 }
 
-void set_memory32(Emulator* emu, uint32_t address, uint32_t value) {
+void set_memory32(Emulator* emu, uint64_t address, uint64_t value) {
     int i;
     for (i = 0; i<4; i++) {
         set_memory8(emu, address+i, value >> (i*8));
@@ -41,11 +41,11 @@ void set_memory64(Emulator* emu, uint64_t address, uint64_t value) {
     }
 }
 
-uint32_t get_memory8(Emulator* emu, uint32_t address) {
+uint64_t get_memory8(Emulator* emu, uint64_t address) {
     return (uint32_t) emu->memory[address];
 }
 
-uint32_t get_memory32(Emulator* emu, uint32_t address) {
+uint64_t get_memory32(Emulator* emu, uint64_t address) {
     int i;
     uint32_t ret = 0;
     for (i=0; i<4; i++) {
@@ -135,8 +135,8 @@ void push64(Emulator* emu, uint64_t value) {
 }
 
 uint64_t pop64(Emulator* emu) {
-    uint32_t address = get_register64(emu, RSP);
-    uint32_t ret = get_memory64(emu, address);
+    uint64_t address = get_register64(emu, RSP);
+    uint64_t ret = get_memory64(emu, address);
     set_register64(emu, RSP, address + 8);
     return ret;
 }

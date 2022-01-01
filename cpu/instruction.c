@@ -272,22 +272,18 @@ static void rex_prefix(Emulator* emu) {
             set_register64(emu, RAX, value);
         } else if (rex_opcode1 == 0x99) {
             // 48 99 => cqo
-            uint64_t rax = get_register64(emu, RAX);
-            set_register64(emu, RAX, rax & 0x7FFFFFFF);
-            set_register64(emu, RDX, (rax & 0x8FFFFFFF) >> 63);
+            // TODO: Must expand rax value to 128 register (RDX, RAX)
+            // uint64_t rax = get_register64(emu, RAX);
+            // set_register64(emu, RAX, rax & 0x7FFFFFFF);
+            // set_register64(emu, RDX, (rax & 0x8FFFFFFF) >> 63);
+            set_register64(emu, RDX, 0);
         } else if (rex_opcode1 == 0xF7) {
-            uint8_t reg = (r << 3) | modrm.reg_index;
-            // mod = modrm.mod;
-            // rm = (b << 3) | modrm.rm;
-            // scale = modrm.scale;
-            // index = (x << 3) | modrm.index;
-            // base = (b << 3) | modrm.base;
-
-            // TODO: support another register.
             // 48 F7 FF => idiv rdi
-            uint64_t v1h = get_register64(emu, RDX);
-            uint64_t v1l = get_register64(emu, RAX);
-            uint64_t v2 = get_register64(emu, reg);
+            uint8_t reg = (r << 3) | modrm.reg_index;
+            // TODO: Must calculate "(RDX, RAX) / rm64"
+            // uint64_t v1h = get_register64(emu, RDX);
+            int64_t v1l = get_register64(emu, RAX);
+            int64_t v2 = get_register64(emu, reg);
 
             uint64_t q = v1l / v2;
             uint64_t rem = v1l % v2;
