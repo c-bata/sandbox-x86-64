@@ -5,6 +5,9 @@
 #include <string.h>
 #include <ctype.h>
 
+// TODO(c-bata): Add a command line option
+bool emu_mode = true;
+
 typedef enum {
     TK_RESERVED, // symbol
     TK_NUM,      // integer token
@@ -341,18 +344,26 @@ int main(int argc, char **argv) {
     user_input = argv[1];
     token = tokenize();
 
-    printf(".intel_syntax noprefix\n");
+    if (emu_mode) {
+        printf("BITS 64\n");
+        printf("  org 0x7c00\n");
+    } else {
+        printf(".intel_syntax noprefix\n");
 #ifdef __linux
-    printf(".global main\n");
-    printf("main:\n");
-#else
-    printf(".global _main\n");
-    printf("_main:\n");
+        printf(".global main\n");
+        printf("main:\n");
+#else  // macOS
+        printf(".global _main\n");
+        printf("_main:\n");
 #endif
+    }
 
     gen(expr());
 
     printf("  pop rax\n");
-    printf("  ret\n");
+    if (emu_mode)
+        printf("  jmp 0\n");
+    else
+        printf("  ret\n");
     return 0;
 }
