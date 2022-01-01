@@ -203,42 +203,104 @@ static void rex_prefix(Emulator* emu) {
 
     if (w) {
         // 64-bit mode
-        uint8_t rex_opcode = get_code8(emu, 0);
+        uint8_t rex_opcode1 = get_code8(emu, 0);
+        uint8_t rex_opcode2 = 0;
         emu->rip += 1;
 
         ModRM modrm;
-        parse_modrm(emu, &modrm);
-        uint8_t reg = (r << 3) | modrm.reg_index;
-        // mod = modrm.mod;
-        // rm = (b << 3) | modrm.rm;
-        // scale = modrm.scale;
-        // index = (x << 3) | modrm.index;
-        // base = (b << 3) | modrm.base;
+        if (rex_opcode1 == 0x0F) {
+            rex_opcode2 = get_code8(emu, 0);
+            emu->rip += 1;
+        } else if (rex_opcode1 != 0x99) {  // != cqo
+            parse_modrm(emu, &modrm);
+        }
 
-        if (rex_opcode == 0x01) {
+        if (rex_opcode1 == 0x01) {
+            uint8_t reg = (r << 3) | modrm.reg_index;
+            // mod = modrm.mod;
+            // rm = (b << 3) | modrm.rm;
+            // scale = modrm.scale;
+            // index = (x << 3) | modrm.index;
+            // base = (b << 3) | modrm.base;
+
             // TODO: support another register.
             // 48 00 F8 => add rax, rdi
             uint64_t v1 = get_register64(emu, RAX);
             uint64_t v2 = get_register64(emu, reg);
             set_register64(emu, RAX, v1 + v2);
-        } else if (rex_opcode == 0x29) {
+        } else if (rex_opcode1 == 0x0F) {
+            if (rex_opcode2 == 0xAF) {
+                // TODO: set overflow values into RDX.
+                uint8_t oprand = get_code8(emu, 0);
+                emu->rip += 1;
+
+                // TODO: support another register.
+                // 48 0F AF C7 => imul rax, rdi  (imul r64, r/m64)
+                uint64_t v1 = get_register64(emu, RAX);
+                uint8_t reg = oprand & 0x0F;
+                uint64_t v2 = get_register64(emu, reg);
+                set_register64(emu, RAX, v1 * v2);
+            } else {
+                printf("not implemented: rex_prefix=%x / w=1 rex_opcode=%x%x\n",
+                       0x40 + wrxb, rex_opcode1, rex_opcode2);
+                exit(1);
+            }
+        } else if (rex_opcode1 == 0x29) {
+            uint8_t reg = (r << 3) | modrm.reg_index;
+            // mod = modrm.mod;
+            // rm = (b << 3) | modrm.rm;
+            // scale = modrm.scale;
+            // index = (x << 3) | modrm.index;
+            // base = (b << 3) | modrm.base;
+
             // TODO: support another register.
             // 48 29 F8 => sub rax, rdi
             uint64_t v1 = get_register64(emu, RAX);
             uint64_t v2 = get_register64(emu, reg);
             set_register64(emu, RAX, v1 - v2);
-        } else if (rex_opcode == 0x89) {
+        } else if (rex_opcode1 == 0x89) {
+            uint8_t reg = (r << 3) | modrm.reg_index;
+            // mod = modrm.mod;
+            // rm = (b << 3) | modrm.rm;
+            // scale = modrm.scale;
+            // index = (x << 3) | modrm.index;
+            // base = (b << 3) | modrm.base;
+
             // TODO: support another register.
             // 48 89 C8 => sub rax, rdi
             uint64_t value = get_register64(emu, reg);
             set_register64(emu, RAX, value);
+        } else if (rex_opcode1 == 0x99) {
+            // 48 99 => cqo
+            uint64_t rax = get_register64(emu, RAX);
+            set_register64(emu, RAX, rax & 0x7FFFFFFF);
+            set_register64(emu, RDX, (rax & 0x8FFFFFFF) >> 63);
+        } else if (rex_opcode1 == 0xF7) {
+            uint8_t reg = (r << 3) | modrm.reg_index;
+            // mod = modrm.mod;
+            // rm = (b << 3) | modrm.rm;
+            // scale = modrm.scale;
+            // index = (x << 3) | modrm.index;
+            // base = (b << 3) | modrm.base;
+
+            // TODO: support another register.
+            // 48 F7 FF => idiv rdi
+            uint64_t v1h = get_register64(emu, RDX);
+            uint64_t v1l = get_register64(emu, RAX);
+            uint64_t v2 = get_register64(emu, reg);
+
+            uint64_t q = v1l / v2;
+            uint64_t rem = v1l % v2;
+            set_register64(emu, RAX, q);
+            set_register64(emu, RDX, rem);
         } else {
-            printf("not implemented: rex_prefix=%x / w=1 rex_opcode=%d\n", 0x40 + wrxb, rex_opcode);
+            printf("not implemented: rex_prefix=%x / w=1 rex_opcode=%x\n",
+                   0x40 + wrxb, rex_opcode1);
             exit(1);
         }
     } else {
         // 32-bit mode
-        printf("not implemented: rex_prefix=%d / w=0\n", 0x40 + wrxb);
+        printf("not implemented: rex_prefix=%x / w=0\n", 0x40 + wrxb);
         exit(1);
     }
 }
