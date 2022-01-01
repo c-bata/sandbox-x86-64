@@ -64,7 +64,7 @@ uint64_t get_memory64(Emulator* emu, uint64_t address) {
 }
 
 // TODO: should be removed
-uint32_t get_register32(Emulator* emu, int index) {
+uint64_t get_register32(Emulator* emu, int index) {
     return emu->registers[index];
 }
 
@@ -89,7 +89,7 @@ uint64_t get_register64(Emulator* emu, int index) {
  *                         |   al   |
  *                         |--------|
  * */
-uint8_t get_register8(Emulator* emu, int index) {
+uint64_t get_register8(Emulator* emu, int index) {
     if (index < 4) { // al, cl, dl, bl
         return emu->registers[index] & 0xff;
     } else { // ah, ch, dh, bh
@@ -173,27 +173,27 @@ void set_overflow(Emulator* emu, int is_overflow) {
     }
 }
 
-void update_rflags_sub(Emulator* emu, uint32_t v1, uint32_t v2, uint64_t result) {
-    int sign1 = v1 >> 31;
-    int sign2 = v2 >> 31;
-    int signr = (result >> 31) & 1;
-    set_carry(emu, (result >> 32) != 0); // 単に (result >> 32) でも可
+void update_rflags_sub(Emulator* emu, uint64_t v1, uint64_t v2, uint64_t result, int is_carry) {
+    int sign1 = v1 >> 63;
+    int sign2 = v2 >> 63;
+    int signr = (result >> 63) & 1;
+    set_carry(emu, is_carry);
     set_zero(emu, result==0);
     set_sign(emu, signr);
     set_overflow(emu, sign1 != sign2 && sign1 != signr);
 }
 
-int32_t is_carry(Emulator* emu) {
+int is_carry(Emulator* emu) {
     return (emu->rflags & CARRY_FLAG) != 0;
 }
 
-int32_t is_zero(Emulator* emu) {
+int is_zero(Emulator* emu) {
     return (emu->rflags & ZERO_FLAG) != 0;
 }
 
-int32_t is_sign(Emulator* emu) {
+int is_sign(Emulator* emu) {
     return (emu->rflags & SIGN_FLAG) != 0;
 }
-int32_t is_overflow(Emulator* emu) {
+int is_overflow(Emulator* emu) {
     return (emu->rflags & OVERFLOW_FLAG) != 0;
 }

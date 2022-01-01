@@ -143,6 +143,37 @@ static void inc_rm32(Emulator* emu, ModRM* modrm) {
     // set_rm32(emu, modrm, value + 1);
 }
 
+static void code_0f(Emulator* emu) {
+    uint8_t po = get_code8(emu, 1);
+    uint8_t oprand = get_code8(emu, 2);
+    emu->rip += 3;
+
+    // TODO: What 'oprand & 0xF0' means?
+    uint8_t reg = oprand & 0x0F;
+
+    switch (po) {
+        case 0x94:
+            // 0F 94 C0 => sete al
+            set_register8(emu, reg, is_zero(emu));
+            break;
+        case 0x95:
+            // 0F 95 C0 => setne al
+            set_register8(emu, reg, !is_zero(emu));
+            break;
+        case 0x9C:
+            // 0F 9C C0 => setl al
+            set_register8(emu, reg, is_sign(emu));
+            break;
+        case 0x9E:
+            // 0F 9E C0 => setle al
+            set_register8(emu, reg, is_sign(emu) || is_zero(emu));
+            break;
+        default:
+            printf("not implemented: 0F /%d\n", po);
+            exit(1);
+    }
+}
+
 static void code_ff(Emulator* emu) {
     // emu->rip += 1;
     // ModRM modrm;
@@ -213,61 +244,61 @@ static void rex_prefix(Emulator* emu) {
             emu->rip += 1;
         } else if (rex_opcode1 != 0x99) {  // != cqo
             parse_modrm(emu, &modrm);
-        }
-
-        if (rex_opcode1 == 0x01) {
-            uint8_t reg = (r << 3) | modrm.reg_index;
+            // reg = (r << 3) | modrm.reg_index;
             // mod = modrm.mod;
             // rm = (b << 3) | modrm.rm;
             // scale = modrm.scale;
             // index = (x << 3) | modrm.index;
             // base = (b << 3) | modrm.base;
+        }
 
-            // TODO: support another register.
+        if (rex_opcode1 == 0x01) {
             // 48 00 F8 => add rax, rdi
+            uint8_t reg = (r << 3) | modrm.reg_index;
             uint64_t v1 = get_register64(emu, RAX);
             uint64_t v2 = get_register64(emu, reg);
             set_register64(emu, RAX, v1 + v2);
         } else if (rex_opcode1 == 0x0F) {
-            if (rex_opcode2 == 0xAF) {
-                // TODO: set overflow values into RDX.
-                uint8_t oprand = get_code8(emu, 0);
-                emu->rip += 1;
+            uint8_t oprand = get_code8(emu, 0);
+            emu->rip += 1;
 
-                // TODO: support another register.
-                // 48 0F AF C7 => imul rax, rdi  (imul r64, r/m64)
-                uint64_t v1 = get_register64(emu, RAX);
-                uint8_t reg = oprand & 0x0F;
-                uint64_t v2 = get_register64(emu, reg);
-                set_register64(emu, RAX, v1 * v2);
-            } else {
-                printf("not implemented: rex_prefix=%x / w=1 rex_opcode=%x%x\n",
-                       0x40 + wrxb, rex_opcode1, rex_opcode2);
-                exit(1);
+            // TODO: What 'oprand & 0xF0' means?
+            uint8_t reg = oprand & 0x0F;
+
+            uint64_t result;
+            switch (rex_opcode2) {
+                case 0xAF:
+                    // 48 0F AF C7 => imul rax, rdi
+                    // TODO: set overflow values into RDX.
+                    result = get_register64(emu, RAX) * get_register64(emu, reg);
+                    set_register64(emu, RAX, result);
+                    break;
+                case 0xB6:
+                    // 48 0F B6 C0 => movzx rax, al
+                    result = get_register8(emu, reg);
+                    set_register64(emu, RAX, result);
+                    break;
+                default:
+                    printf("not implemented: rex_prefix=%02x / w=1 rex_opcode=%02x%02x\n",
+                           0x40 + wrxb, rex_opcode1, rex_opcode2);
+                    exit(1);
             }
         } else if (rex_opcode1 == 0x29) {
-            uint8_t reg = (r << 3) | modrm.reg_index;
-            // mod = modrm.mod;
-            // rm = (b << 3) | modrm.rm;
-            // scale = modrm.scale;
-            // index = (x << 3) | modrm.index;
-            // base = (b << 3) | modrm.base;
-
-            // TODO: support another register.
             // 48 29 F8 => sub rax, rdi
+            uint8_t reg = (r << 3) | modrm.reg_index;
             uint64_t v1 = get_register64(emu, RAX);
             uint64_t v2 = get_register64(emu, reg);
             set_register64(emu, RAX, v1 - v2);
-        } else if (rex_opcode1 == 0x89) {
+        } else if (rex_opcode1 == 0x39) {
+            // 48 39 F8 => cmp rax, rdi
             uint8_t reg = (r << 3) | modrm.reg_index;
-            // mod = modrm.mod;
-            // rm = (b << 3) | modrm.rm;
-            // scale = modrm.scale;
-            // index = (x << 3) | modrm.index;
-            // base = (b << 3) | modrm.base;
-
-            // TODO: support another register.
+            uint64_t v1 = get_register64(emu, RAX);
+            uint64_t v2 = get_register64(emu, reg);
+            int is_carry = 0; // TODO: Please fix here.
+            update_rflags_sub(emu, v1, v2, v1-v2, is_carry);
+        } else if (rex_opcode1 == 0x89) {
             // 48 89 C8 => sub rax, rdi
+            uint8_t reg = (r << 3) | modrm.reg_index;
             uint64_t value = get_register64(emu, reg);
             set_register64(emu, RAX, value);
         } else if (rex_opcode1 == 0x99) {
@@ -290,13 +321,13 @@ static void rex_prefix(Emulator* emu) {
             set_register64(emu, RAX, q);
             set_register64(emu, RDX, rem);
         } else {
-            printf("not implemented: rex_prefix=%x / w=1 rex_opcode=%x\n",
+            printf("not implemented: rex_prefix=%02x / w=1 rex_opcode=%02x\n",
                    0x40 + wrxb, rex_opcode1);
             exit(1);
         }
     } else {
         // 32-bit mode
-        printf("not implemented: rex_prefix=%x / w=0\n", 0x40 + wrxb);
+        printf("not implemented: rex_prefix=%02x / w=0\n", 0x40 + wrxb);
         exit(1);
     }
 }
@@ -353,6 +384,13 @@ static void leave(Emulator* emu) {
     // set_register32(emu, EBP, pop32(emu));
 }
 
+static void setz_al(Emulator* emu) {
+    uint16_t address = get_register32(emu, RDX) & 0xffff;
+    // uint8_t value = io_in8(address);
+    // set_register8(emu, AL, value);
+    // emu->rip += 1;
+}
+
 static void in_al_dx(Emulator* emu) {
     // uint16_t address = get_register32(emu, EDX) & 0xffff;
     // uint8_t value = io_in8(address);
@@ -372,6 +410,7 @@ void init_instructions(void) {
     memset(instructions, 0, sizeof(instructions));
 
     instructions[0x01] = add_rm32_r32;
+    instructions[0x0F] = code_0f;
     instructions[0x3B] = cmp_r32_rm32;
     instructions[0x3C] = cmp_al_imm8;
 

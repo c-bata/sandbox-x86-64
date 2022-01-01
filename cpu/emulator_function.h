@@ -22,8 +22,8 @@ uint64_t get_memory8(Emulator* emu, uint64_t address);
 uint64_t get_memory32(Emulator* emu, uint64_t address);
 uint64_t get_memory64(Emulator* emu, uint64_t address);
 
-uint8_t get_register8(Emulator* emu, int index);
-uint32_t get_register32(Emulator* emu, int index);
+uint64_t get_register8(Emulator* emu, int index);
+uint64_t get_register32(Emulator* emu, int index);
 uint64_t get_register64(Emulator* emu, int index);
 
 void set_register8(Emulator* emu, int index, uint8_t value);
@@ -35,10 +35,10 @@ uint32_t pop32(Emulator* emu);
 void push64(Emulator* emu, uint64_t value);
 uint64_t pop64(Emulator* emu);
 
-void update_rflags_sub(Emulator* emu, uint32_t v1, uint32_t v2, uint64_t result);
-int32_t is_carry(Emulator* emu);
-int32_t is_zero(Emulator* emu);
-int32_t is_sign(Emulator* emu);
-int32_t is_overflow(Emulator* emu);
+void update_rflags_sub(Emulator* emu, uint64_t v1, uint64_t v2, uint64_t result, int is_carry);
+int is_carry(Emulator* emu);
+int is_zero(Emulator* emu);
+int is_sign(Emulator* emu);
+int is_overflow(Emulator* emu);
 
 #endif

@@ -296,15 +296,6 @@ void gen(Node* node) {
             printf("  imul rax, rdi\n");
             break;
         case ND_DIV:
-            // idivは符号あり除算を行う命令です。
-            // x86-64のidivが素直な仕様になっていれば、本来idiv rax, rdiのように書きたかったところですが、
-            // そのような2つのレジスタをとる除算命令はx86-64には存在しません。
-            //
-            // その代わりに、idivは暗黙のうちにRDXとRAXを取って、それを合わせたものを128ビット整数とみなして、
-            // それを引数のレジスタの64ビットの値で割り、商をRAXに、余りをRDXにセットする、という仕様になっています。
-            //
-            // cqo命令を使うと、RAXに入っている64ビットの値を128ビットに伸ばしてRDXとRAXにセットすることができるので、
-            // idivを呼ぶ前にcqoを呼んでいます。
             printf("  cqo\n");
             printf("  idiv rdi\n");
             break;
@@ -367,6 +358,7 @@ int main(int argc, char **argv) {
     token = tokenize();
 
     if (emu_mode) {
+        printf("%%define movzb movzx\n");  // Macro for NASM
         printf("BITS 64\n");
         printf("  org 0x7c00\n");
     } else {
