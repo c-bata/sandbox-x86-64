@@ -21,8 +21,8 @@ int opt_remove_at(int argc, char* argv[], int index) {
 }
 
 typedef enum {
-    TK_RESERVED, // symbol
-    TK_NUM,      // integer token
+    TK_PUNCT, // symbol
+    TK_NUM,   // integer token
     TK_EOF,
 } TokenKind;
 
@@ -101,17 +101,25 @@ static Token *skip(Token *tok, char *s) {
 }
 
 // Generate a new token and set to cur->next.
-Token *new_token(TokenKind kind, Token *cur, char *str, int len) {
+Token *new_token(TokenKind kind, char *start, char* end) {
     Token *tok = calloc(1, sizeof(Token));
     tok->kind = kind;
-    tok->loc = str;
-    tok->len = len;
-    cur->next = tok;
+    tok->loc = start;
+    tok->len = end- start;
     return tok;
 }
 
 bool startswith(char *p, char *q) {
     return memcmp(p, q, strlen(q)) == 0;
+}
+
+// Read a punctuator token from p and returns its length.
+static int read_punct(char *p) {
+    if (startswith(p, "==") || startswith(p, "!=") ||
+        startswith(p, "<=") || startswith(p, ">="))
+        return 2;
+
+    return ispunct(*p) ? 1 : 0;
 }
 
 Token *tokenize() {
@@ -127,31 +135,25 @@ Token *tokenize() {
             continue;
         }
 
-        // Multi-letter punctuator
-        if (startswith(p, "==") || startswith(p, "!=") ||
-            startswith(p, "<=") || startswith(p, ">=")) {
-            cur = new_token(TK_RESERVED, cur, p, 2);
-            p += 2;
-            continue;
-        }
-
-        // Single-letter punctuator
-        if (strchr("+-*/()><", *p)) {
-            cur = new_token(TK_RESERVED, cur, p++, 1);
-            continue;
-        }
-
-        // Integer literal
+        // Numeric literal
         if (isdigit(*p)) {
-            cur = new_token(TK_NUM, cur, p, 0);
+            cur = cur->next = new_token(TK_NUM, p, 0);
             char *q = p;
             cur->val = strtoul(p, &p, 10);
             cur->len = p - q;
             continue;
         }
+
+        // Punctuators
+        int punct_len = read_punct(p);
+        if (punct_len) {
+            cur = cur->next = new_token(TK_PUNCT, p, p + punct_len);
+            p += cur->len;
+            continue;
+        }
         error_at(p, "tokenizer error: '%c'\n", *p);
     }
-    new_token(TK_EOF, cur, p, 0);
+    cur = cur->next = new_token(TK_EOF, p, p);
     return head.next;
 }
 
