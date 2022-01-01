@@ -11,7 +11,7 @@
 #define MEMORY_SIZE (1024 * 1024)
 
 bool quiet = false;
-char* registers_name[] = {"EAX", "ECX", "EDX", "EBX", "ESP", "EBP", "ESI", "EDI"};
+char* registers_name[] = {"RAX", "RCX", "RDX", "RBX", "RSP", "RBP", "RSI", "RDI"};
 
 void debugf(char *fmt, ...) {
     if (quiet) {
@@ -29,13 +29,13 @@ void errorf(char *fmt, ...) {
     exit(1);
 }
 
-Emulator* create_emu(size_t size, uint32_t eip, uint32_t esp) {
+Emulator* create_emu(size_t size, uint64_t rip, uint64_t rsp) {
     Emulator* emu = malloc(sizeof(Emulator));
     emu->memory = malloc(size);
 
     memset(emu->registers, 0, sizeof(emu->registers));
-    emu->eip = eip;
-    emu->registers[ESP] = esp;
+    emu->rip = rip;
+    emu->registers[RSP] = rsp;
     return emu;
 }
 
@@ -49,7 +49,7 @@ static void dump_registers(Emulator* emu) {
     for (i = 0; i < REGISTERS_COUNT; i++) {
         debugf("%s = %08x\n", registers_name[i], emu->registers[i]);
     }
-    debugf("EIP = %08x\n", emu->eip);
+    debugf("RIP = %08x\n", emu->rip);
 }
 
 int opt_remove_at(int argc, char* argv[], int index) {
@@ -91,9 +91,9 @@ int main(int argc, char* argv[]) {
 
     init_instructions();
 
-    while (emu->eip < MEMORY_SIZE) {
+    while (emu->rip < MEMORY_SIZE) {
         uint8_t code = get_code8(emu, 0);
-        debugf("EIP = %X, Code = %02X\n", emu->eip, code);
+        debugf("EIP = %X, Code = %02X\n", emu->rip, code);
 
         if (instructions[code] == NULL) {
             printf("\n\nNot Implemented: %x\n", code);
@@ -102,7 +102,7 @@ int main(int argc, char* argv[]) {
         instructions[code](emu);
 
         // Exit if jump to 0x00
-        if (emu->eip == 0x00) {
+        if (emu->rip == 0x00) {
             debugf("\n\nend of program.\n\n");
             break;
         }
@@ -110,7 +110,7 @@ int main(int argc, char* argv[]) {
 
     dump_registers(emu);
 
-    int exit_status = (int) emu->registers[EAX];
+    int exit_status = (int) emu->registers[RAX];
     destroy_emu(emu);
     return exit_status;
 }

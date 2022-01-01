@@ -4,15 +4,15 @@
 #include <stdint.h>
 
 enum Register {
-    EAX, ECX, EDX, EBX, ESP, EBP, ESI, EDI, REGISTERS_COUNT,
-    AL = EAX, CL = ECX, DL = EDX, BL = EBX,
+    RAX, RCX, RDX, RBX, RSP, RBP, RSI, RDI, REGISTERS_COUNT,
+    AL = RAX, CL = RCX, DL = RDX, BL = RBX,
     AH = AL + 4, CH = CL + 4, DH = DL + 4, BH = BL + 4};
 
 typedef struct {
-    uint32_t registers[REGISTERS_COUNT];
-    uint32_t eflags;
+    uint64_t registers[REGISTERS_COUNT];
+    uint64_t rflags;
     uint8_t* memory;  // Memory (byte array)
-    uint32_t eip;
+    uint64_t rip;
 } Emulator;
 
 #endif

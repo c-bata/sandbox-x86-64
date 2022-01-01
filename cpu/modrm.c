@@ -16,17 +16,17 @@ void parse_modrm(Emulator* emu, ModRM* modrm) {
     modrm->opecode = ((code & 0x38) >> 3); // 0x38 = 0011 1000
     modrm->rm = (code & 0x07);             // 0x07 = 0000 0111
 
-    emu->eip += 1;
+    emu->rip += 1;
     if (modrm->mod != 3 && modrm->rm == 4) {
         modrm->sib = get_code8(emu, 0);
-        emu->eip += 1;
+        emu->rip += 1;
     }
     if ((modrm->mod == 0 && modrm->rm == 5) || modrm->mod == 2) {
         modrm->disp32 = get_code32(emu, 0);
-        emu->eip += 4;
+        emu->rip += 4;
     } else if (modrm->mod == 1) {
         modrm->disp8 = get_sign_code8(emu, 0);
-        emu->eip += 1;
+        emu->rip += 1;
     }
 }
 

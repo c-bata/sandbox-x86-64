@@ -28,7 +28,7 @@ void set_register32(Emulator* emu, int index, uint32_t value);
 void push32(Emulator* emu, uint32_t value);
 uint32_t pop32(Emulator* emu);
 
-void update_eflags_sub(Emulator* emu, uint32_t v1, uint32_t v2, uint64_t result);
+void update_rflags_sub(Emulator* emu, uint32_t v1, uint32_t v2, uint64_t result);
 int32_t is_carry(Emulator* emu);
 int32_t is_zero(Emulator* emu);
 int32_t is_sign(Emulator* emu);

@@ -1,4 +1,5 @@
-BITS 32
-    org 0x7c00
-    mov eax, 41
-    jmp 0
+BITS 64
+  org 0x7c00
+  push 0
+  pop rax
+  jmp 0
