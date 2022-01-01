@@ -73,5 +73,7 @@ assert 0 '1>=2'
 echo ""
 echo "Failure case:"
 assert_fail '5 + foo -  4 '
+assert_fail '  + - -'
+assert_fail '10 10'
 
 echo OK

@@ -31,7 +31,7 @@ struct Token {
     TokenKind kind;  // token type
     Token *next;     // next token
     int val;         // used only if kind==TK_NUM
-    char *str;       // token string
+    char *loc;       // token string
     int len;         // token length
 };
 
@@ -56,10 +56,7 @@ struct Node {
 };
 
 // Input program
-char *user_input;
-
-// Current token
-Token *token;
+static char *current_input;
 
 void error(char *fmt, ...) {
     va_list ap;
@@ -69,55 +66,45 @@ void error(char *fmt, ...) {
     exit(1);
 }
 
-void error_at(char *loc, char *fmt, ...) {
-    va_list ap;
-    va_start(ap, fmt);
-
-    int pos = loc - user_input;
-    fprintf(stderr, "%s\n", user_input);
-    fprintf(stderr, "%*s", pos, " ");  // Print pos spaces
+// Reports an error location and exit.
+static void verror_at(char *loc, char *fmt, va_list ap) {
+    int pos = loc - current_input;
+    fprintf(stderr, "%s\n", current_input);
+    fprintf(stderr, "%*s", pos, ""); // print pos spaces.
     fprintf(stderr, "^ ");
     vfprintf(stderr, fmt, ap);
     fprintf(stderr, "\n");
     exit(1);
 }
 
-// If next token is an expected symbol, move to the next token and return true.
-bool consume(char *op) {
-    if (token->kind != TK_RESERVED || strlen(op) != token->len ||
-        memcmp(token->str, op, token->len))
-        return false;
-    token = token->next;
-    return true;
+void error_at(char *loc, char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    verror_at(loc, fmt, ap);
 }
 
-// If next token is an expected symbol, move to the next token.
-void expect(char *op) {
-    if (token->kind != TK_RESERVED || strlen(op) != token->len ||
-        memcmp(token->str, op, token->len))
-        error_at(token->str, "expected \"%s\" but got \"%s\"",
-                 op, token->str);
-    token = token->next;
+static void error_tok(Token *tok, char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    verror_at(tok->loc, fmt, ap);
 }
 
-// If next token is TK_NUM, return number after move to the next token.
-int expect_number() {
-    if (token->kind != TK_NUM)
-        error_at(token->str, "current token is not number");
-    int val = token->val;
-    token = token->next;
-    return val;
+static bool equal(Token *tok, char *s) {
+    return strlen(s) == tok->len && !strncmp(tok->loc, s, tok->len);
 }
 
-bool at_eof() {
-    return token->kind == TK_EOF;
+// Ensure that the current token is `s`.
+static Token *skip(Token *tok, char *s) {
+    if (!equal(tok, s))
+        error_tok(tok, "expected '%s'", s);
+    return tok->next;
 }
 
 // Generate a new token and set to cur->next.
 Token *new_token(TokenKind kind, Token *cur, char *str, int len) {
     Token *tok = calloc(1, sizeof(Token));
     tok->kind = kind;
-    tok->str = str;
+    tok->loc = str;
     tok->len = len;
     cur->next = tok;
     return tok;
@@ -128,7 +115,7 @@ bool startswith(char *p, char *q) {
 }
 
 Token *tokenize() {
-    char *p = user_input;
+    char *p = current_input;
     Token head;
     head.next = NULL;
     Token *cur = &head;
@@ -158,7 +145,7 @@ Token *tokenize() {
         if (isdigit(*p)) {
             cur = new_token(TK_NUM, cur, p, 0);
             char *q = p;
-            cur->val = strtol(p, &p, 10);
+            cur->val = strtoul(p, &p, 10);
             cur->len = p - q;
             continue;
         }
@@ -168,9 +155,14 @@ Token *tokenize() {
     return head.next;
 }
 
-Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
+Node *new_node(NodeKind kind) {
     Node *node = calloc(1, sizeof(Node));
     node->kind = kind;
+    return node;
+}
+
+static Node *new_binary(NodeKind kind, Node *lhs, Node *rhs) {
+    Node *node = new_node(kind);
     node->lhs = lhs;
     node->rhs = rhs;
     return node;
@@ -194,94 +186,121 @@ Node *new_node_num(int val) {
 // ↓
 // High Priority
 
-Node *expr();
-Node *equality();
-Node *relational();
-Node *add();
-Node *mul();
-Node *unary();
-Node *primary();
+Node *expr(Token **rest, Token *tok);
+Node *equality(Token **rest, Token *tok);
+Node *relational(Token **rest, Token *tok);
+Node *add(Token **rest, Token *tok);
+Node *mul(Token **rest, Token *tok);
+Node *unary(Token **rest, Token *tok);
+Node *primary(Token **rest, Token *tok);
 
-Node *expr() {
-    return equality();
+Node *expr(Token **rest, Token *tok) {
+    return equality(rest, tok);
 }
 
-Node *equality() {
-    Node* node = relational();
+Node *equality(Token **rest, Token *tok) {
+    Node* node = relational(&tok, tok);
     for (;;) {
-        if (consume("=="))
-            node = new_node(ND_EQ, node, relational());
-        else if (consume("!="))
-            node = new_node(ND_NE, node, relational());
-        else
-            return node;
-    }
-}
-Node *relational() {
-    Node* node = add();
-    for (;;) {
-        if (consume("<"))
-            node = new_node(ND_LT, node, add());
-        else if (consume("<="))
-            node = new_node(ND_LE, node, add());
-        else if (consume(">"))
-            node = new_node(ND_LT, add(), node);
-        else if (consume(">="))
-            node = new_node(ND_LE, add(), node);
-        else
-            return node;
-    }
-}
-
-Node *add() {
-    Node *node = mul();
-    for (;;) {
-        if (consume("+"))
-            node = new_node(ND_ADD, node, mul());
-        else if (consume("-"))
-            node = new_node(ND_SUB, node, mul());
-        else
-            return node;
-    }
-}
-
-Node *mul() {
-    Node *node = unary();
-    for (;;) {
-        if (consume("*"))
-            node = new_node(ND_MUL, node, unary());
-        else if (consume("/"))
-            node = new_node(ND_DIV, node, unary());
-        else
-            return node;
-    }
-}
-
-Node *unary() {
-    if (consume("+"))
-        return unary();
-    if (consume("-"))
-        return new_node(ND_SUB, new_node_num(0), unary());
-    return primary();
-}
-
-Node *primary() {
-    if (consume("(")) {
-        Node *node = expr();
-        expect(")");
+        if (equal(tok, "==")) {
+            node = new_binary(ND_EQ, node, relational(&tok, tok->next));
+            continue;
+        }
+        if (equal(tok, "!=")) {
+            node = new_binary(ND_NE, node, relational(&tok, tok->next));
+            continue;;
+        }
+        *rest = tok;
         return node;
     }
-    return new_node_num(expect_number());
 }
 
-void gen(Node* node) {
+Node *relational(Token **rest, Token *tok) {
+    Node* node = add(&tok, tok);
+    for (;;) {
+        if (equal(tok, "<")) {
+            node = new_binary(ND_LT, node, add(&tok, tok->next));
+            continue;
+        }
+        if (equal(tok, "<=")) {
+            node = new_binary(ND_LE, node, add(&tok, tok->next));
+            continue;
+        }
+        if (equal(tok, ">")) {
+            node = new_binary(ND_LT, add(&tok, tok->next), node);
+            continue;
+        }
+        if (equal(tok, ">=")) {
+            node = new_binary(ND_LE, add(&tok, tok->next), node);
+            continue;
+        }
+        *rest = tok;
+        return node;
+    }
+}
+
+Node *add(Token **rest, Token *tok) {
+    Node *node = mul(&tok, tok);
+    for (;;) {
+        if (equal(tok, "+")) {
+            node = new_binary(ND_ADD, node, mul(&tok, tok->next));
+            continue;
+        }
+        if (equal(tok, "-")) {
+            node = new_binary(ND_SUB, node, mul(&tok, tok->next));
+            continue;
+        }
+        *rest = tok;
+        return node;
+    }
+}
+
+Node *mul(Token **rest, Token *tok) {
+    Node *node = unary(&tok, tok);
+    for (;;) {
+        if (equal(tok, "*")) {
+            node = new_binary(ND_MUL, node, unary(&tok, tok->next));
+            continue;
+        }
+        if (equal(tok, "/")) {
+            node = new_binary(ND_DIV, node, unary(&tok, tok->next));
+            continue;
+        }
+        *rest = tok;
+        return node;
+    }
+}
+
+Node *unary(Token **rest, Token *tok) {
+    if (equal(tok, "+"))
+        return unary(rest, tok->next);
+
+    if (equal(tok, "-"))
+        return new_binary(ND_SUB, new_node_num(0), unary(rest, tok->next));
+    return primary(rest, tok);
+}
+
+Node *primary(Token **rest, Token *tok) {
+    if (equal(tok, "(")) {
+        Node *node = expr(&tok, tok->next);
+        *rest = skip(tok, ")");
+        return node;
+    }
+    if (tok->kind == TK_NUM) {
+        Node *node = new_node_num(tok->val);
+        *rest = tok->next;
+        return node;
+    }
+    error_tok(tok, "expected an expression");
+}
+
+void gen_expr(Node* node) {
     if (node->kind == ND_NUM) {
         printf("  push %d\n", node->val);
         return;
     }
 
-    gen(node->lhs);
-    gen(node->rhs);
+    gen_expr(node->lhs);
+    gen_expr(node->rhs);
 
     printf("  pop rdi\n");
     printf("  pop rax\n");
@@ -354,8 +373,12 @@ int main(int argc, char **argv) {
         error("error: no input program.");
     }
 
-    user_input = argv[1];
-    token = tokenize();
+    current_input = argv[1];
+    Token *tok = tokenize();
+    Node *node = expr(&tok, tok);
+
+    if (tok->kind != TK_EOF)
+        error_tok(tok, "extra token");
 
     if (emu_mode) {
         printf("%%define movzb movzx\n");  // Macro for NASM
@@ -372,7 +395,7 @@ int main(int argc, char **argv) {
 #endif
     }
 
-    gen(expr());
+    gen_expr(node);
 
     printf("  pop rax\n");
     if (emu_mode)
