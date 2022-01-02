@@ -21,4 +21,4 @@ test: all
 clean:
 	rm -rf cpu *.o test/*.o test/*.txt test/*.bin *.dSYM
 
-.PHONY: all cpu clean test
+.PHONY: all test clean

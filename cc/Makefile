@@ -1,9 +1,12 @@
 CC = gcc
-SRCS = main.c
+SRCS = $(wildcard *.c)
+OBJS = $(SRCS:.c=.o)
 CFLAGS = -std=c11 -Wall -g
 
-9cc: $(SRCS)
-	$(CC) $(CFLAGS) -o $@ $(SRCS)
+9cc: $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+
+$(OBJS): 9cc.h
 
 test: 9cc
 	./run-tests.sh
@@ -11,4 +14,4 @@ test: 9cc
 clean:
 	rm -rf 9cc *.o *~ tmp* *.dSYM
 
-.PHONY: 9cc test clean
+.PHONY: test clean
