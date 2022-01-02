@@ -306,12 +306,19 @@ static void rex_prefix(Emulator* emu) {
         set_register64(emu, reg1, result);
         return;
     } else if (po == 0x0F && so == 0xB6) {
-        // ex) 48 0F B6 C0 => movzx rax, al
         uint8_t oprand = get_code8(emu, 1);
         emu->rip += 2;
-        uint8_t reg = oprand & 0x0F;
-        uint64_t result = get_register8(emu, reg);
-        set_register64(emu, RAX, result);
+        // ex) 48 0F B6 C0 => movzx rax, al
+        //     48 => 0100 1000 => W=1, R=0, X=0, B=0
+        //     C0 => 1100 0000 => reg1 = 000 = 0, reg2 = 000 = 0
+        // ex) 4C 0F B6 D0 => movzx r10, al
+        //     4C => 0100 1100 => W=1, R=1, X=0, B=0
+        //     D0 => 1101 0000 => reg1 = 000 = 0, reg2 = 000 = 0
+        uint8_t reg1 = (r << 3) | ((oprand & 0x38) >> 3); // 0011 1000
+        uint8_t reg2 = (b << 3) | (oprand & 0x07);  // 0000 B000 | (oprand & 0000 0111)
+
+        uint64_t result = get_register8(emu, reg2);
+        set_register64(emu, reg1, result);
         return;
     } else if (po == 0x0F) {
         printf("not implemented: rex_prefix=%02x / w=1 rex_opcode=%02x%02x\n",
