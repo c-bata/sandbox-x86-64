@@ -316,30 +316,31 @@ void gen_expr(Node* node) {
     gen_expr(node->lhs);
     gen_expr(node->rhs);
 
-    char *rdi = reg(top--);
-    char *rax = reg(top--);
+    char *rd = reg(top - 2);
+    char *rs = reg(top - 1);
+    top--;
+
     switch (node->kind) {
         case ND_ADD:
-            printf("  add %s, %s\n", rax, rdi);
-            break;
+            printf("  add %s, %s\n", rd, rs);
+            return;
         case ND_SUB:
-            printf("  sub %s, %s\n", rax, rdi);
-            break;
+            printf("  sub %s, %s\n", rd, rs);
+            return;
         case ND_MUL:
-            printf("  imul %s, %s\n", rax, rdi);
-            break;
+            printf("  imul %s, %s\n", rd, rs);
+            return;
         case ND_DIV:
-            printf("  mov rax, %s\n", rax);
+            printf("  mov rax, %s\n", rd);
             printf("  cqo\n");
-            printf("  idiv %s\n", rdi);
-            printf("  mov %s, rax\n", rax);
-            printf("  mov %s, rdi\n", rdi);
-            break;
+            printf("  idiv %s\n", rs);
+            printf("  mov %s, rax\n", rd);
+            return;
         case ND_EQ:
         case ND_NE:
         case ND_LT:
         case ND_LE:
-            printf("  cmp %s, %s\n", rax, rdi);
+            printf("  cmp %s, %s\n", rd, rs);
             if (node->kind == ND_EQ)
                 printf("  sete al\n");
             else if (node->kind == ND_NE)
@@ -349,13 +350,14 @@ void gen_expr(Node* node) {
             else if (node->kind == ND_LE)
                 printf("  setle al\n");
 #ifdef __linux
-            printf("  movzb %s, al\n", rax);
+            printf("  movzb %s, al\n", rd);
 #else
-            printf("  movzx %s, al\n", rax);
+            printf("  movzx %s, al\n", rd);
 #endif
             break;
+        default:
+            error("invalid expression");
     }
-    printf("  mov %s, %s\n", reg(top++), rax);
 }
 
 int main(int argc, char **argv) {
