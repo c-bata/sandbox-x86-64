@@ -349,12 +349,23 @@ static void rex_prefix(Emulator* emu) {
         // 48 89 C8 => sub rax, rdi
         uint64_t value = get_register64(emu, reg);
         set_register64(emu, rm, value);
-    } else if (po == 0xF7) {
-        // 48 F7 FF => idiv rdi
+    } else if (po == 0xF7) {  // Signed Divide
+        // 48 F7 FF => idiv rdi(7)
+        //   B=0
+        //   ModRM = FF
+        //     mod(11)=3
+        //     reg(111)=7
+        //     rm(111)=7
+        // 49 F7 FB => idiv r11(11)
+        //   B=1
+        //   ModRM = FB  1111 1011
+        //     mod(11)=3
+        //     reg(111)=7
+        //     rm(011)=3
         // TODO: Must calculate "(RDX, RAX) / rm64"
         // uint64_t v1h = get_register64(emu, RDX);
         int64_t v1l = get_register64(emu, RAX);
-        int64_t v2 = get_register64(emu, reg);
+        int64_t v2 = get_register64(emu, rm);
 
         uint64_t q = v1l / v2;
         uint64_t rem = v1l % v2;
