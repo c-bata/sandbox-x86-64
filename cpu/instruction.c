@@ -363,6 +363,10 @@ static void rex_prefix(Emulator* emu) {
         // 48 89 C8 => sub rax, rdi
         uint64_t value = get_register64(emu, reg);
         set_register64(emu, rm, value);
+    } else if (po == 0x8D) {
+        // 48 8D 45 F8 => lea rax,[rbp-0x8]
+        uint64_t addr = get_register64(emu, rm) + modrm.disp8;
+        set_register64(emu, reg, addr);
     } else if (po == 0xF7 && modrm.opecode == 7) {
         // Signed Divide - 1111 011w : 11 111 reg
         // 48 F7 FF => idiv rdi(7)
