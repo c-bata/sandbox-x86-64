@@ -8,6 +8,7 @@
 //
 
 typedef enum {
+    TK_IDENT, // Identifiers
     TK_PUNCT, // Punctuators
     TK_NUM,   // Numeric literals
     TK_EOF,   // End-of-file marker
@@ -42,7 +43,9 @@ typedef enum {
     ND_NE,        // !=
     ND_LT,        // <
     ND_LE,        // <=
+    ND_ASSIGN,    // =
     ND_EXPR_STMT, // Expression statement ';'
+    ND_VAR,       // Variable
     ND_NUM,       // integer
 } NodeKind;
 
