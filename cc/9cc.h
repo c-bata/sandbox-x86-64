@@ -56,7 +56,7 @@ struct Node {
     Node *lhs;     // left-hand side
     Node *rhs;     // right-hand side
     int val;       // used only if kind==ND_NUM
-    int offset;    // Offset from RBP. Used only if kind==ND_VAR
+    char name;     // used only if kind==ND_VAR
 };
 
 Node *parse(Token *tok);

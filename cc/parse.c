@@ -42,7 +42,7 @@ static Node *new_node_num(int val) {
 static Node *new_ident(char c) {
     Node *node = calloc(1, sizeof(Node));
     node->kind = ND_VAR;
-    node->offset = (c - 'a' + 1) * 8;
+    node->name = c;
     return node;
 }
 

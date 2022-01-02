@@ -3,11 +3,11 @@
 
 static void gen_node(Node *node) {
     if (node->kind == ND_VAR) {
-        printf("%d [label=\"VAR %c\" color=orange, style=filled]\n", (int) node, 'a' -1 + (node->offset / 8));
+        printf("%d [label=\"VAR %c\" color=orange, style=filled]\n", (int) node, node->name);
     } else if (node->kind == ND_ASSIGN) {
         printf("%d [label=\"ASSIGN\" color=orange, style=filled]\n", (int) node);
     } else if (node->kind == ND_NUM) {
-        printf("%d [label=\"NUM %ld\" color=orange, style=filled]\n", (int) node, node->val);
+        printf("%d [label=\"NUM %d\" color=orange, style=filled]\n", (int) node, node->val);
     //} else if (node->kind == ND_RETURN) {
     //    printf("%d [label=\"RETURN\" color=orange, style=filled]\n", (int) node);
     } else if (node->kind == ND_EXPR_STMT) {
