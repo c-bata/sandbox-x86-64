@@ -21,18 +21,18 @@ int opt_remove_at(int argc, char* argv[], int index) {
 }
 
 typedef enum {
-    TK_PUNCT, // symbol
-    TK_NUM,   // integer token
-    TK_EOF,
+    TK_PUNCT, // Punctuators
+    TK_NUM,   // Numeric literals
+    TK_EOF,   // End-of-file marker
 } TokenKind;
 
 typedef struct Token Token;
 struct Token {
-    TokenKind kind;  // token type
-    Token *next;     // next token
-    int val;         // used only if kind==TK_NUM
-    char *loc;       // token string
-    int len;         // token length
+    TokenKind kind;  // Token type
+    Token *next;     // Next token
+    int val;         // Used only if kind==TK_NUM
+    char *loc;       // Token location
+    int len;         // Token length
 };
 
 typedef enum {
@@ -321,35 +321,18 @@ void gen_expr(Node* node) {
             printf("  idiv rdi\n");
             break;
         case ND_EQ:
-            printf("  cmp rax, rdi\n");
-            printf("  sete al\n");
-#ifdef __linux
-            printf("  movzb rax, al\n");
-#else
-            printf("  movzx rax, al\n");
-#endif
-            break;
         case ND_NE:
-            printf("  cmp rax, rdi\n");
-            printf("  setne al\n");
-#ifdef __linux
-            printf("  movzb rax, al\n");
-#else
-            printf("  movzx rax, al\n");
-#endif
-            break;
         case ND_LT:
-            printf("  cmp rax, rdi\n");
-            printf("  setl al\n");
-#ifdef __linux
-            printf("  movzb rax, al\n");
-#else
-            printf("  movzx rax, al\n");
-#endif
-            break;
         case ND_LE:
             printf("  cmp rax, rdi\n");
-            printf("  setle al\n");
+            if (node->kind == ND_EQ)
+                printf("  sete al\n");
+            else if (node->kind == ND_NE)
+                printf("  setne al\n");
+            else if (node->kind == ND_LT)
+                printf("  setl al\n");
+            else if (node->kind == ND_LE)
+                printf("  setle al\n");
 #ifdef __linux
             printf("  movzb rax, al\n");
 #else
