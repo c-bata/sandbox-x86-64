@@ -234,8 +234,30 @@ static void rex_prefix(Emulator* emu) {
 
     if (!w) {
         // 32-bit mode
-        printf("not implemented: rex_prefix=%02x / w=0\n", 0x40 + wrxb);
-        exit(1);
+        uint8_t opcode32 = get_code8(emu, 0);
+        if (opcode32 >= 0x50 && opcode32 < 0x58) {
+            // 41 54 => push r12
+            uint8_t reg = get_code8(emu, 0) - 0x50 + R8;
+            push64(emu, get_register64(emu, reg));
+            emu->rip += 1;
+        } else if (opcode32 >= 0x58 && opcode32 <= 0x5F) {
+            // 41 5C => pop r12
+            uint8_t reg = get_code8(emu, 0) - 0x58 + R8;
+            uint64_t value = pop64(emu);
+            set_register64(emu, reg, value);
+            emu->rip += 1;
+        } else if (opcode32 >= 0xB8 && opcode32 <= 0xBF ) {
+            // mov_r64_imm32
+            // 41 BA 00 00 00 00 => mov r10, 0x0
+            uint8_t reg = get_code8(emu, 0) - 0xB8 + R8;
+            uint64_t value = get_code32(emu, 1);
+            emu->registers[reg] = value;
+            emu->rip += 5;  // opcode 1 byte, operand 4 bytes
+        } else {
+            printf("not implemented: rex_prefix=%02x / w=0\n", 0x40 + wrxb);
+            exit(1);
+        }
+        return;
     }
 
     // 64-bit mode
