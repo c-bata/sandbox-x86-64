@@ -374,10 +374,17 @@ static void rex_prefix(Emulator* emu) {
         uint64_t addr = get_register64(emu, rm);
         uint64_t val = get_memory64(emu, addr);
         set_register64(emu, reg, val);
-    } else if (po == 0x8D) {
-        // 48 8D 45 F8 => lea rax,[rbp-0x8]
+    } else if (po == 0x8D && modrm.mod == 1) {
+        // ex) 48 8D 45 F8 => lea rax,[rbp-0x8]
         uint64_t addr = get_register64(emu, rm) + modrm.disp8;
         set_register64(emu, reg, addr);
+    } else if (po == 0x8D && ((modrm.mod == 0 && modrm.rm == 5) || modrm.mod == 2)) {
+        // ex) 48 8D 85 30FFFFFF => lea rax,[rbp-0xd0]
+        uint64_t addr = get_register64(emu, rm) + (int32_t) modrm.disp32;
+        set_register64(emu, reg, addr);
+    } else if (po == 0x8D) {
+        printf("not implemented: rex_prefix=0x8D / mod=%d rm=%d\n", modrm.mod, modrm.rm);
+        exit(1);
     } else if (po == 0xF7 && modrm.opecode == 7) {
         // Signed Divide - 1111 011w : 11 111 reg
         // 48 F7 FF => idiv rdi(7)

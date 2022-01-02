@@ -62,5 +62,7 @@ assert 1 '1>=1;'
 assert 0 '1>=2;'
 
 assert 3 'a=3; a;'
+assert 6 'a=b=3; a+b;'
+assert 8 'a=3; z=5; a+z;'
 
 echo Done
