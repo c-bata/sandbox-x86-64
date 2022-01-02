@@ -295,36 +295,51 @@ Node *primary(Token **rest, Token *tok) {
     error_tok(tok, "expected an expression");
 }
 
+
+// Code generator
+
+static char *reg(int idx) {
+    static char *r[] = {"r10", "r11", "r12", "r13", "r14", "r15"};
+    if (idx < 0 || sizeof(r) / sizeof(*r) <= idx)
+        error("register out of range: %d", idx);
+    return r[idx];
+}
+
+static int top;
+
 void gen_expr(Node* node) {
     if (node->kind == ND_NUM) {
-        printf("  push %d\n", node->val);
+        printf("  mov %s, %d\n", reg(top++), node->val);
         return;
     }
 
     gen_expr(node->lhs);
     gen_expr(node->rhs);
 
-    printf("  pop rdi\n");
-    printf("  pop rax\n");
+    char *rdi = reg(top--);
+    char *rax = reg(top--);
     switch (node->kind) {
         case ND_ADD:
-            printf("  add rax, rdi\n");
+            printf("  add %s, %s\n", rax, rdi);
             break;
         case ND_SUB:
-            printf("  sub rax, rdi\n");
+            printf("  sub %s, %s\n", rax, rdi);
             break;
         case ND_MUL:
-            printf("  imul rax, rdi\n");
+            printf("  imul %s, %s\n", rax, rdi);
             break;
         case ND_DIV:
+            printf("  mov rax, %s\n", rax);
             printf("  cqo\n");
-            printf("  idiv rdi\n");
+            printf("  idiv %s\n", rdi);
+            printf("  mov %s, rax\n", rax);
+            printf("  mov %s, rdi\n", rdi);
             break;
         case ND_EQ:
         case ND_NE:
         case ND_LT:
         case ND_LE:
-            printf("  cmp rax, rdi\n");
+            printf("  cmp %s, %s\n", rax, rdi);
             if (node->kind == ND_EQ)
                 printf("  sete al\n");
             else if (node->kind == ND_NE)
@@ -334,13 +349,13 @@ void gen_expr(Node* node) {
             else if (node->kind == ND_LE)
                 printf("  setle al\n");
 #ifdef __linux
-            printf("  movzb rax, al\n");
+            printf("  movzb %s, al\n", rax);
 #else
-            printf("  movzx rax, al\n");
+            printf("  movzx %s, al\n", rax);
 #endif
             break;
     }
-    printf("  push rax\n");
+    printf("  mov %s, %s\n", reg(top++), rax);
 }
 
 int main(int argc, char **argv) {
@@ -380,9 +395,20 @@ int main(int argc, char **argv) {
 #endif
     }
 
+    // The called routine is expected to preserve rsp,rbp, rbx, r12, r13, r14, and r15
+    // but may trample any other registers.
+    printf("  push r12\n");
+    printf("  push r13\n");
+    printf("  push r14\n");
+    printf("  push r15\n");
     gen_expr(node);
 
-    printf("  pop rax\n");
+    printf("  mov rax, %s\n", reg(top-1));
+    printf("  pop r15\n");
+    printf("  pop r14\n");
+    printf("  pop r13\n");
+    printf("  pop r12\n");
+
     if (emu_mode)
         printf("  jmp 0\n");
     else
