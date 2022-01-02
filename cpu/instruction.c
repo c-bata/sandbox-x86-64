@@ -230,7 +230,7 @@ static void rex_prefix(Emulator* emu) {
     uint8_t w = (wrxb & 0x08) >> 3;
     uint8_t r = (wrxb & 0x04) >> 2;
     // uint16_t x = (wrxb & 0x02) >> 1;
-    // uint16_t b = (wrxb & 0x01);
+    uint16_t b = (wrxb & 0x01);
 
     if (!w) {
         // 32-bit mode
@@ -310,30 +310,31 @@ static void rex_prefix(Emulator* emu) {
     parse_modrm(emu, &modrm);
     uint8_t reg = (r << 3) | modrm.reg_index;
     // mod = modrm.mod;
-    // rm = (b << 3) | modrm.rm;
+    uint8_t rm = (b << 3) | modrm.rm;
     // scale = modrm.scale;
     // index = (x << 3) | modrm.index;
     // base = (b << 3) | modrm.base;
     if (po == 0x01) {
-        // 48 00 F8 => add rax, rdi
-        uint64_t v1 = get_register64(emu, RAX);
+        // 48 01 F8 => add rax, rdi
+        // 4D 01 E3 => add r11,r12
+        uint64_t v1 = get_register64(emu, rm);
         uint64_t v2 = get_register64(emu, reg);
-        set_register64(emu, RAX, v1 + v2);
+        set_register64(emu, rm, v1 + v2);
     } else if (po == 0x29) {
         // 48 29 F8 => sub rax, rdi
-        uint64_t v1 = get_register64(emu, RAX);
+        uint64_t v1 = get_register64(emu, rm);
         uint64_t v2 = get_register64(emu, reg);
-        set_register64(emu, RAX, v1 - v2);
+        set_register64(emu, rm, v1 - v2);
     } else if (po == 0x39) {
         // 48 39 F8 => cmp rax, rdi
-        uint64_t v1 = get_register64(emu, RAX);
+        uint64_t v1 = get_register64(emu, rm);
         uint64_t v2 = get_register64(emu, reg);
         int is_carry = 0; // TODO: Please fix here.
         update_rflags_sub(emu, v1, v2, v1-v2, is_carry);
     } else if (po == 0x89) {
         // 48 89 C8 => sub rax, rdi
         uint64_t value = get_register64(emu, reg);
-        set_register64(emu, RAX, value);
+        set_register64(emu, rm, value);
     } else if (po == 0xF7) {
         // 48 F7 FF => idiv rdi
         // TODO: Must calculate "(RDX, RAX) / rm64"
