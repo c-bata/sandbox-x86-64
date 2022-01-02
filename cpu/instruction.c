@@ -276,33 +276,47 @@ static void rex_prefix(Emulator* emu) {
     }
 
     // Primary opcode + Secondary opcode (No ModR/M)
-    if (po == 0x0F) {
-        uint16_t so = get_code8(emu, 0);  // secondary opcode
+    uint8_t so = get_code8(emu, 0);
+    if (po == 0x0F && so == 0xAF) { // Signed multiply
         uint8_t oprand = get_code8(emu, 1);
         emu->rip += 2;
 
-        // TODO: What 'oprand & 0xF0' means?
-        uint8_t reg = oprand & 0x0F;
+        // 0000 1111 : 1010 1111 : 11 : reg1 reg2
+        // ex)
+        //   48 0F AF C7 => imul rax, rdi  // reg1=0, reg2=7
+        //     48 => 0100 1000 => W=1, R=0, X=0, B=0
+        //     C7 => 1100 0111 => reg1 = 000 = 0, reg2 = 111 = 7
+        //
+        //   4D 0F AF D3 => imul r10, r11  // reg1=10, reg2=11
+        //     4D => 0100 1101 => W=1, R=1, X=0, B=1
+        //     D3 => 1101 0011 => reg1 = 010 = 2, reg2 = 011 = 3
+        //
+        //   49 0F AF C3 => imul rax,r11   // reg1=0, reg2=11
+        //     49 => 0100 1001 => W=1, R=0, X=0, B=1
+        //     C3 => 1100 0011 => reg1 = 000 = 0, reg2 = 011 = 3
+        //
+        //   4C 0F AF D7 => imul r10,rdi  // reg1=10, reg2=7
+        //     4C => 0100 1100 => W=1, R=1, X=0, B=0
+        //     D7 => 1101 0111 => reg1 = 010 = 2, reg2 = 111 = 7
+        uint8_t reg1 = (r << 3) | ((oprand & 0x38) >> 3); // 0011 1000
+        uint8_t reg2 = (b << 3) | (oprand & 0x07);  // 0000 B000 | (oprand & 0000 0111)
 
-        uint64_t result;
-        switch (so) {
-            case 0xAF:
-                // 48 0F AF C7 => imul rax, rdi
-                // TODO: set overflow values into RDX.
-                result = get_register64(emu, RAX) * get_register64(emu, reg);
-                set_register64(emu, RAX, result);
-                break;
-            case 0xB6:
-                // 48 0F B6 C0 => movzx rax, al
-                result = get_register8(emu, reg);
-                set_register64(emu, RAX, result);
-                break;
-            default:
-                printf("not implemented: rex_prefix=%02x / w=1 rex_opcode=%02x%02x\n",
-                       0x40 + wrxb, po, so);
-                exit(1);
-        }
+        // TODO: set overflow values into RDX and set OF=1.
+        uint64_t result = get_register64(emu, reg1) * get_register64(emu, reg2);
+        set_register64(emu, reg1, result);
         return;
+    } else if (po == 0x0F && so == 0xB6) {
+        // ex) 48 0F B6 C0 => movzx rax, al
+        uint8_t oprand = get_code8(emu, 1);
+        emu->rip += 2;
+        uint8_t reg = oprand & 0x0F;
+        uint64_t result = get_register8(emu, reg);
+        set_register64(emu, RAX, result);
+        return;
+    } else if (po == 0x0F) {
+        printf("not implemented: rex_prefix=%02x / w=1 rex_opcode=%02x%02x\n",
+               0x40 + wrxb, po, so);
+        exit(1);
     }
 
     // Primary opcode + ModR/M
@@ -435,6 +449,7 @@ void init_instructions(void) {
     instructions[0x3B] = cmp_r32_rm32;
     instructions[0x3C] = cmp_al_imm8;
 
+    // REX prefixes are a set of 16 opcodes that span one row of the opcode map and occupy entries 40H to 4FH.
     for (i=0; i<16; i++) {
         instructions[0x40+i] = rex_prefix;
     }
