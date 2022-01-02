@@ -19,10 +19,10 @@ static void mov_r8_imm8(Emulator* emu) {
 }
 
 static void mov_r32_imm32(Emulator* emu) {
-    // uint8_t reg = get_code8(emu, 0) - 0xB8;
-    // uint32_t value = get_code32(emu, 1);
-    // emu->registers[reg] = value;
-    // emu->rip += 5;  // opcode 1 byte, operand 4 bytes
+    uint8_t reg = get_code8(emu, 0) - 0xB8;
+    uint64_t value = get_code32(emu, 1);
+    emu->registers[reg] = value;
+    emu->rip += 5;  // opcode 1 byte, operand 4 bytes
 }
 
 static void mov_rm32_imm32(Emulator* emu) {

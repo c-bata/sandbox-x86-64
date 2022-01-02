@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <ctype.h>
+#include <assert.h>
 
 bool emu_mode = false;
 
@@ -306,53 +307,52 @@ Node *primary(Token **rest, Token *tok) {
 
 // Code generator
 
-static char *reg(int idx) {
-    static char *r[] = {"r10", "r11", "r12", "r13", "r14", "r15"};
-    if (idx < 0 || sizeof(r) / sizeof(*r) <= idx)
-        error("register out of range: %d", idx);
-    return r[idx];
+static int depth;
+
+static void push(void) {
+    printf("  push rax\n");
+    depth++;
 }
 
-static int top;
+static void pop(char *arg) {
+    printf("  pop %s\n", arg);
+    depth--;
+}
 
 void gen_expr(Node* node) {
     if (node->kind == ND_NUM) {
-        printf("  mov %s, %d\n", reg(top++), node->val);
+        printf("  mov rax, %d\n", node->val);
         return;
     } else if (node->kind == ND_NEG) {
         gen_expr(node->lhs);
-        printf("  neg %s\n", reg(top-1));
+        printf("  neg rax\n");
         return;
     }
 
-    gen_expr(node->lhs);
-    gen_expr(node->rhs);
-
-    char *rd = reg(top - 2);
-    char *rs = reg(top - 1);
-    top--;
+    gen_expr(node->rhs); // rhs -> rax
+    push();  // rhs -> stack
+    gen_expr(node->lhs); // lhs -> rax
+    pop("rdi");  // rhs -> rdi
 
     switch (node->kind) {
         case ND_ADD:
-            printf("  add %s, %s\n", rd, rs);
+            printf("  add rax, rdi\n");
             return;
         case ND_SUB:
-            printf("  sub %s, %s\n", rd, rs);
+            printf("  sub rax, rdi\n");
             return;
         case ND_MUL:
-            printf("  imul %s, %s\n", rd, rs);
+            printf("  imul rax, rdi\n");
             return;
         case ND_DIV:
-            printf("  mov rax, %s\n", rd);
             printf("  cqo\n");
-            printf("  idiv %s\n", rs);
-            printf("  mov %s, rax\n", rd);
+            printf("  idiv rdi\n");
             return;
         case ND_EQ:
         case ND_NE:
         case ND_LT:
         case ND_LE:
-            printf("  cmp %s, %s\n", rd, rs);
+            printf("  cmp rax, rdi\n");
             if (node->kind == ND_EQ)
                 printf("  sete al\n");
             else if (node->kind == ND_NE)
@@ -362,14 +362,13 @@ void gen_expr(Node* node) {
             else if (node->kind == ND_LE)
                 printf("  setle al\n");
 #ifdef __linux
-            printf("  movzb %s, al\n", rd);
+            printf("  movzb rax, al\n");
 #else
-            printf("  movzx %s, al\n", rd);
+            printf("  movzx rax, al\n");
 #endif
-            break;
-        default:
-            error("invalid expression");
+            return;
     }
+    error("invalid expression");
 }
 
 int main(int argc, char **argv) {
@@ -409,23 +408,13 @@ int main(int argc, char **argv) {
 #endif
     }
 
-    // The called routine is expected to preserve rsp,rbp, rbx, r12, r13, r14, and r15
-    // but may trample any other registers.
-    printf("  push r12\n");
-    printf("  push r13\n");
-    printf("  push r14\n");
-    printf("  push r15\n");
     gen_expr(node);
-
-    printf("  mov rax, %s\n", reg(top-1));
-    printf("  pop r15\n");
-    printf("  pop r14\n");
-    printf("  pop r13\n");
-    printf("  pop r12\n");
 
     if (emu_mode)
         printf("  jmp 0\n");
     else
         printf("  ret\n");
+
+    assert(depth == 0);
     return 0;
 }
