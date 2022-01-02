@@ -40,6 +40,7 @@ typedef enum {
     ND_SUB, // -
     ND_MUL, // *
     ND_DIV, // /
+    ND_NEG, // unary -
     ND_EQ,  // ==
     ND_NE,  // !=
     ND_LT,  // <
@@ -157,7 +158,7 @@ Token *tokenize() {
     return head.next;
 }
 
-Node *new_node(NodeKind kind) {
+static Node *new_node(NodeKind kind) {
     Node *node = calloc(1, sizeof(Node));
     node->kind = kind;
     return node;
@@ -170,7 +171,13 @@ static Node *new_binary(NodeKind kind, Node *lhs, Node *rhs) {
     return node;
 }
 
-Node *new_node_num(int val) {
+static Node *new_unary(NodeKind kind, Node* expr) {
+    Node* node = new_node(kind);
+    node->lhs = expr;
+    return node;
+}
+
+static Node *new_node_num(int val) {
     Node *node = calloc(1, sizeof(Node));
     node->kind = ND_NUM;
     node->val = val;
@@ -276,8 +283,9 @@ Node *unary(Token **rest, Token *tok) {
     if (equal(tok, "+"))
         return unary(rest, tok->next);
 
-    if (equal(tok, "-"))
-        return new_binary(ND_SUB, new_node_num(0), unary(rest, tok->next));
+    if (equal(tok, "-")) {
+        return new_unary(ND_NEG, unary(rest, tok->next));
+    }
     return primary(rest, tok);
 }
 
@@ -310,6 +318,10 @@ static int top;
 void gen_expr(Node* node) {
     if (node->kind == ND_NUM) {
         printf("  mov %s, %d\n", reg(top++), node->val);
+        return;
+    } else if (node->kind == ND_NEG) {
+        gen_expr(node->lhs);
+        printf("  neg %s\n", reg(top-1));
         return;
     }
 

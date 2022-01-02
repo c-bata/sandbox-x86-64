@@ -356,7 +356,8 @@ static void rex_prefix(Emulator* emu) {
         // 48 89 C8 => sub rax, rdi
         uint64_t value = get_register64(emu, reg);
         set_register64(emu, rm, value);
-    } else if (po == 0xF7) {  // Signed Divide
+    } else if (po == 0xF7 && modrm.opecode == 7) {
+        // Signed Divide - 1111 011w : 11 111 reg
         // 48 F7 FF => idiv rdi(7)
         //   B=0
         //   ModRM = FF
@@ -378,6 +379,11 @@ static void rex_prefix(Emulator* emu) {
         uint64_t rem = v1l % v2;
         set_register64(emu, RAX, q);
         set_register64(emu, RDX, rem);
+    } else if (po == 0xF7 && modrm.opecode == 3) {
+        // Two's Complement Negation - 1111 011w : 11 011 reg
+        // 49 F7 DA => neg r10
+        int64_t value = get_register64(emu, rm);
+        set_register64(emu, rm, -value);
     } else {
         printf("not implemented: rex_prefix=%02x / w=1 rex_opcode=%02x\n",
                0x40 + wrxb, po);
