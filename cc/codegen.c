@@ -67,6 +67,14 @@ static void gen_expr(Node* node) {
     error("invalid expression");
 }
 
+static void gen_stmt(Node* node) {
+    if (node->kind == ND_EXPR_STMT) {
+        gen_expr(node->lhs);
+        return;
+    }
+    error("invalid statement");
+}
+
 void codegen(Node *node, CodeGenOption* option) {
     emu_mode = option->cpu_emu;
 
@@ -85,12 +93,13 @@ void codegen(Node *node, CodeGenOption* option) {
 #endif
     }
 
-    gen_expr(node);
+    for (Node *n = node; n; n = n->next) {
+        gen_stmt(n);
+        assert(depth == 0);
+    }
 
     if (emu_mode)
         printf("  jmp 0\n");
     else
         printf("  ret\n");
-
-    assert(depth == 0);
 }

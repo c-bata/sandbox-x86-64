@@ -40,6 +40,7 @@ static Node *new_node_num(int val) {
 }
 
 // EBNF
+// | stmt       = expr ";"
 // | expr       = equality
 // | equality   = relational ("==" relational | "!=" relational)*
 // | relational = add ("<" add | "<=" add | ">" add | ">=" add)*
@@ -50,6 +51,7 @@ static Node *new_node_num(int val) {
 // ↓
 // High Priority
 
+Node *stmt(Token **rest, Token *tok);
 Node *expr(Token **rest, Token *tok);
 Node *equality(Token **rest, Token *tok);
 Node *relational(Token **rest, Token *tok);
@@ -57,6 +59,12 @@ Node *add(Token **rest, Token *tok);
 Node *mul(Token **rest, Token *tok);
 Node *unary(Token **rest, Token *tok);
 Node *primary(Token **rest, Token *tok);
+
+Node *stmt(Token **rest, Token *tok) {
+    Node *node = new_unary(ND_EXPR_STMT, expr(&tok, tok));
+    *rest = skip(tok, ";");
+    return node;
+}
 
 Node *expr(Token **rest, Token *tok) {
     return equality(rest, tok);
@@ -159,8 +167,10 @@ Node *primary(Token **rest, Token *tok) {
 }
 
 Node *parse(Token *tok) {
-    Node *node = expr(&tok, tok);
-    if (tok->kind != TK_EOF)
-        error_tok(tok, "extra token");
-    return node;
+    Node head = {};
+    Node *cur = &head;
+
+    while (tok->kind != TK_EOF)
+        cur = cur->next = stmt(&tok, tok);
+    return head.next;
 }
