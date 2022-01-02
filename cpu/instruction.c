@@ -359,10 +359,21 @@ static void rex_prefix(Emulator* emu) {
         uint64_t v1 = get_register64(emu, rm);
         set_register64(emu, rm, v1-v2);
         emu->rip += 4;
-    } else if (po == 0x89) {
+    } else if (po == 0x89 && modrm.mod == 3) {
         // 48 89 C8 => sub rax, rdi
         uint64_t value = get_register64(emu, reg);
         set_register64(emu, rm, value);
+    } else if (po == 0x89 && modrm.mod == 0) {
+        // ex) 48 89 07 => mov [rdi],rax
+        uint64_t addr = get_register64(emu, rm);
+        uint64_t val = get_register64(emu, reg);
+        set_memory64(emu, addr, val);
+    } else if (po == 0x8B) {
+        // 1000 101w : mod reg r/m
+        // ex) 48 8B 07 => mov rax,[rdi]
+        uint64_t addr = get_register64(emu, rm);
+        uint64_t val = get_memory64(emu, addr);
+        set_register64(emu, reg, val);
     } else if (po == 0x8D) {
         // 48 8D 45 F8 => lea rax,[rbp-0x8]
         uint64_t addr = get_register64(emu, rm) + modrm.disp8;
