@@ -9,6 +9,9 @@ CFLAGS = -std=c11 -Wall -g
 tokendump: tools/tokendump.c tokenize.c
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
+astdump: tools/astdump.c tokenize.c parse.c
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+
 $(OBJS): 9cc.h
 
 test: 9cc

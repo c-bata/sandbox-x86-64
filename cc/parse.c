@@ -39,20 +39,29 @@ static Node *new_node_num(int val) {
     return node;
 }
 
+static Node *new_ident(char c) {
+    Node *node = calloc(1, sizeof(Node));
+    node->kind = ND_VAR;
+    node->offset = (c - 'a' + 1) * 8;
+    return node;
+}
+
 // EBNF
 // | stmt       = expr ";"
-// | expr       = equality
+// | expr       = assign
+// | assign     = equality ("=" assign)?
 // | equality   = relational ("==" relational | "!=" relational)*
 // | relational = add ("<" add | "<=" add | ">" add | ">=" add)*
 // | add        = mul ("+" mul | "-" mul)*
 // | mul        = unary ("*" unary | "/" unary)*
 // | unary      = ("+" | "-")? primary
-// | primary    = num | "(" expr ")"
+// | primary    = num | ident | "(" expr ")"
 // ↓
 // High Priority
 
 Node *stmt(Token **rest, Token *tok);
 Node *expr(Token **rest, Token *tok);
+Node *assign(Token **rest, Token *tok);
 Node *equality(Token **rest, Token *tok);
 Node *relational(Token **rest, Token *tok);
 Node *add(Token **rest, Token *tok);
@@ -67,7 +76,19 @@ Node *stmt(Token **rest, Token *tok) {
 }
 
 Node *expr(Token **rest, Token *tok) {
-    return equality(rest, tok);
+    return assign(rest, tok);
+}
+
+Node *assign(Token **rest, Token *tok) {
+    Node *node = equality(&tok, tok);
+    for (;;) {
+        if (equal(tok, "=")) {
+            node = new_binary(ND_ASSIGN, node, assign(&tok, tok->next));
+            continue;
+        }
+        *rest = tok;
+        return node;
+    }
 }
 
 Node *equality(Token **rest, Token *tok) {
@@ -156,6 +177,11 @@ Node *primary(Token **rest, Token *tok) {
     if (equal(tok, "(")) {
         Node *node = expr(&tok, tok->next);
         *rest = skip(tok, ")");
+        return node;
+    }
+    if (tok->kind == TK_IDENT) {
+        Node *node = new_ident(tok->loc[0]);
+        *rest = tok->next;
         return node;
     }
     if (tok->kind == TK_NUM) {
