@@ -350,7 +350,15 @@ static void rex_prefix(Emulator* emu) {
         uint64_t v1 = get_register64(emu, rm);
         uint64_t v2 = get_register64(emu, reg);
         int is_carry = 0; // TODO: Please fix here.
-        update_rflags_sub(emu, v1, v2, v1-v2, is_carry);
+        update_rflags_sub(emu, v1, v2, v1 - v2, is_carry);
+    } else if (po == 0x81) {
+        // SUB: immediate -> register
+        // 1000 00sw : 11 101 reg : immediate data
+        // ex) 48 81 EC D0 00 00 00 => sub rsp,0xd0
+        uint64_t v2 = get_code32(emu, 0);
+        uint64_t v1 = get_register64(emu, rm);
+        set_register64(emu, rm, v1-v2);
+        emu->rip += 4;
     } else if (po == 0x89) {
         // 48 89 C8 => sub rax, rdi
         uint64_t value = get_register64(emu, reg);
