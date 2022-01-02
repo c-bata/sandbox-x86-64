@@ -39,9 +39,8 @@ static Node *new_node_num(int val) {
     return node;
 }
 
-static Node *new_ident(char c) {
-    Node *node = calloc(1, sizeof(Node));
-    node->kind = ND_VAR;
+static Node *new_var_node(char c) {
+    Node *node = new_node(ND_VAR);
     node->name = c;
     return node;
 }
@@ -180,7 +179,7 @@ Node *primary(Token **rest, Token *tok) {
         return node;
     }
     if (tok->kind == TK_IDENT) {
-        Node *node = new_ident(tok->loc[0]);
+        Node *node = new_var_node(tok->loc[0]);
         *rest = tok->next;
         return node;
     }

@@ -15,14 +15,39 @@ static void pop(char *arg) {
     depth--;
 }
 
+// Compute the absolute address of a given node.
+// It's an error if a given node does not reside in memory.
+static void gen_addr(Node *node) {
+    if (node->kind == ND_VAR) {
+        int offset = (node->name - 'a' + 1) * 8;
+        // "lea dst, [src]" calculates the absolute address of src,
+        // then load it into rax.
+        printf("  lea rax, [rbp-%d]\n", offset);
+        return;
+    }
+    error("not an lvalue");
+}
+
 static void gen_expr(Node* node) {
-    if (node->kind == ND_NUM) {
-        printf("  mov rax, %d\n", node->val);
-        return;
-    } else if (node->kind == ND_NEG) {
-        gen_expr(node->lhs);
-        printf("  neg rax\n");
-        return;
+    switch (node->kind) {
+        case ND_NUM:
+            printf("  mov rax, %d\n", node->val);
+            return;
+        case ND_NEG:
+            gen_expr(node->lhs);
+            printf("  neg rax\n");
+            return;
+        case ND_ASSIGN:
+            gen_addr(node->lhs); // lvar address -> rax
+            push();  // address -> stack
+            gen_expr(node->rhs);  // rvalue -> rax
+            pop("rdi");  // address -> rdi
+            printf("  mov [rdi], rax\n");  // rvalue -> [address]
+            return;
+        case ND_VAR:
+            gen_addr(node); // address -> rax
+            printf("  mov rax, [rax]\n");  // [address] -> rax
+            return;
     }
 
     gen_expr(node->rhs); // rhs -> rax
@@ -93,10 +118,19 @@ void codegen(Node *node, CodeGenOption* option) {
 #endif
     }
 
+    // Prologue
+    printf("  push rbp\n");
+    printf("  mov rbp, rsp\n");
+    printf("  sub rsp, %d\n", ('z'-'a' + 1) * 8);
+
     for (Node *n = node; n; n = n->next) {
         gen_stmt(n);
         assert(depth == 0);
     }
+
+    // Epilogue
+    printf("  mov rsp, rbp\n");
+    printf("  pop rbp\n");
 
     if (emu_mode)
         printf("  jmp 0\n");
