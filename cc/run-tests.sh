@@ -75,10 +75,12 @@ assert 8 'a=3; z=5; return a+z;'
 assert 5 'a=3; return 5; return a;'
 assert 6 'a=b=3; return a+b;'
 
+assert 1 '{ return 1; }'
+assert 6 '{ a=b=3; return a+b; }'
+
 # failure case
 echo ""
 echo "Failure case:"
-assert_fail '5 + foo -  4 ;'
 assert_fail '  + - -;'
 assert_fail '10 10;'
 assert_fail '10 10'
