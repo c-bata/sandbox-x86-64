@@ -15,6 +15,11 @@ static void pop(char *arg) {
     depth--;
 }
 
+static int gen_unique_num(void) {
+    static int i = 1;
+    return i++;
+}
+
 // Compute the absolute address of a given node.
 // It's an error if a given node does not reside in memory.
 static void gen_addr(Node *node) {
@@ -104,6 +109,23 @@ static void gen_stmt(Node* node) {
         case ND_RETURN:
             gen_expr(node->lhs);
             printf("  jmp .L.return\n");
+            return;
+        case ND_IF:
+            gen_expr(node->cond);  // cond -> rax
+            printf("  cmp rax, 0\n");
+            int unique_label = gen_unique_num();
+            if (node->els == NULL) {
+                printf("  je .Lend%d\n", unique_label);
+                gen_stmt(node->then);
+                printf(".Lend%d:\n", unique_label);
+            } else {
+                printf("  je .Lels%d\n", unique_label);
+                gen_stmt(node->then);
+                printf("  jmp .Lend%d\n", unique_label);
+                printf(".Lels%d:\n", unique_label);
+                gen_stmt(node->els);
+                printf(".Lend%d:\n", unique_label);
+            }
             return;
     }
     error("invalid statement");
