@@ -89,10 +89,12 @@ struct Node {
     // Block
     Node *body;
 
-    // "if" statement
+    // "if", "while", or "for" statement
     Node *cond;
     Node *then;
     Node *els;
+    Node *init;
+    Node *inc;
 };
 
 Function *parse(Token *tok);

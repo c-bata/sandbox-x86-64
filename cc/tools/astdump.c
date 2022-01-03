@@ -54,9 +54,17 @@ static void gen_node(Node *node) {
         printf("%d -> %d [label=\"body\"]\n", (int) node, (int) node->body);
         gen_node(node->body);
     }
+    if (node->init != NULL) {
+        printf("%d -> %d [label=\"init\"]\n", (int) node, (int) node->init);
+        gen_node(node->init);
+    }
     if (node->cond != NULL) {
         printf("%d -> %d [label=\"cond\"]\n", (int) node, (int) node->cond);
         gen_node(node->cond);
+    }
+    if (node->inc != NULL) {
+        printf("%d -> %d [label=\"inc\"]\n", (int) node, (int) node->inc);
+        gen_node(node->inc);
     }
     if (node->then != NULL) {
         printf("%d -> %d [label=\"then\"]\n", (int) node, (int) node->then);

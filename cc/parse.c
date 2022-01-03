@@ -130,6 +130,24 @@ Node *stmt(Token **rest, Token *tok) {
         *rest = tok;
         return node;
     }
+    if (equal(tok, "for")) {
+        node = new_node(ND_FOR);
+        tok = skip(tok, "for");
+        tok = skip(tok, "(");
+        if (!equal(tok, ";"))
+            node->init = expr(&tok, tok);
+        tok = skip(tok, ";");
+        if (!equal(tok, ";"))
+            node->cond = expr(&tok, tok);
+        tok = skip(tok, ";");
+        if (!equal(tok, ")"))
+            node->inc = expr(&tok, tok);
+        tok = skip(tok, ")");
+
+        node->then = stmt(&tok, tok);
+        *rest = tok;
+        return node;
+    }
     if (equal(tok, "return")) {
         node = new_unary(ND_RETURN, expr(&tok, tok->next));
         *rest = skip(tok, ";");

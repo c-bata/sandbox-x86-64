@@ -138,6 +138,22 @@ static void gen_stmt(Node* node) {
             printf("  jmp .Lbegin%d\n", unique_label);
             printf(".Lend%d:\n", unique_label);
             return;
+        case ND_FOR:
+            unique_label = gen_unique_num();
+            if (node->init != NULL)
+                gen_expr(node->init);
+            printf(".Lbegin%d:\n", unique_label);
+            if (node->cond != NULL) {
+                gen_expr(node->cond);
+                printf("  cmp rax, 0\n");
+                printf("  je .Lend%d\n", unique_label);
+            }
+            gen_stmt(node->then);
+            if (node->inc != NULL)
+                gen_expr(node->inc);
+            printf("  jmp .Lbegin%d\n", unique_label);
+            printf(".Lend%d:\n", unique_label);
+            return;
     }
     error("invalid statement");
 }
