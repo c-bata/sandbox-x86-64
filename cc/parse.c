@@ -46,8 +46,7 @@ static Node *new_unary(NodeKind kind, Node* expr) {
 }
 
 static Node *new_node_num(int val) {
-    Node *node = calloc(1, sizeof(Node));
-    node->kind = ND_NUM;
+    Node *node = new_node(ND_NUM);
     node->val = val;
     return node;
 }
@@ -68,7 +67,7 @@ static Obj *new_lvar(char *name) {
 
 // EBNF
 // | program    = stmt*
-// | stmt       = expr ";" | "return" expr ";"
+// | stmt       = expr ";" | "{" stmt* "}" | "return" expr ";"
 // | expr       = assign
 // | assign     = equality ("=" assign)?
 // | equality   = relational ("==" relational | "!=" relational)*
@@ -92,10 +91,24 @@ Node *primary(Token **rest, Token *tok);
 
 Node *stmt(Token **rest, Token *tok) {
     Node *node;
-    if (equal(tok, "return"))
+    if (equal(tok, "{")) {
+        // "{" stmt* "}"
+        Node head = {};
+        Node *cur = &head;
+        while (!equal(tok, "}")) {
+            cur = cur->next = stmt(&tok, tok->next);
+        }
+        node = new_node(ND_BLOCK);
+        node->body = head.next;
+        *rest = skip(tok, "}");
+        return node;
+    }
+
+    if (equal(tok, "return")) {
         node = new_unary(ND_RETURN, expr(&tok, tok->next));
-    else
+    } else {
         node = new_unary(ND_EXPR_STMT, node = expr(&tok, tok));
+    }
     *rest = skip(tok, ";");
     return node;
 }

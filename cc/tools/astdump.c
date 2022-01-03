@@ -30,10 +30,11 @@ static void gen_node(Node *node) {
         printf("%d [label=\"*\" color=orange, style=filled]\n", (int) node);
     } else if (node->kind == ND_DIV) {
         printf("%d [label=\"/\" color=orange, style=filled]\n", (int) node);
+    } else if (node->kind == ND_BLOCK) {
+        printf("%d [label=\"{ BLOCK }\" color=orange, style=filled]\n", (int) node);
     } else {
         printf("%d [label=\"%d\" color=orange, style=filled]\n", (int) node, node->kind);
     }
-
 
     if (node->lhs != NULL) {
         printf("%d -> %d\n", (int) node, (int) node->lhs);
@@ -42,6 +43,14 @@ static void gen_node(Node *node) {
     if (node->rhs != NULL) {
         printf("%d -> %d\n", (int) node, (int) node->rhs);
         gen_node(node->rhs);
+    }
+    if (node->body != NULL) {
+        printf("%d -> %d\n", (int) node, (int) node->body);
+        gen_node(node->body);
+    }
+    if (node->next != NULL) {
+        printf("%d -> %d\n", (int) node, (int) node->next);
+        gen_node(node->next);
     }
 }
 
