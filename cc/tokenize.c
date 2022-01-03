@@ -44,12 +44,20 @@ static Token *new_token(TokenKind kind, char *start, char* end) {
     Token *tok = calloc(1, sizeof(Token));
     tok->kind = kind;
     tok->loc = start;
-    tok->len = end- start;
+    tok->len = end - start;
     return tok;
 }
 
 static bool startswith(char *p, char *q) {
     return memcmp(p, q, strlen(q)) == 0;
+}
+
+static bool is_alphabet(char c) {
+    return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || c == '_';
+}
+
+static bool is_alnum(char c) {
+    return is_alphabet(c) || ('0' <= c && c <= '9');
 }
 
 // Read a punctuator token from p and returns its length.
@@ -84,9 +92,12 @@ Token *tokenize(char *p) {
         }
 
         // Identifier
-        if ('a' <= *p && *p <= 'z') {
-            cur = cur->next = new_token(TK_IDENT, p, p+1);
-            p++;
+        if (is_alphabet(*p)) {
+            char *start = p;
+            do {
+                p++;
+            } while (is_alnum(*p));
+            cur = cur->next = new_token(TK_IDENT, start, p);
             continue;
         }
 
