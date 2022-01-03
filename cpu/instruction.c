@@ -359,13 +359,20 @@ static void rex_prefix(Emulator* emu) {
         uint64_t v1 = get_register64(emu, rm);
         set_register64(emu, rm, v1 - v2);
         emu->rip += 4;
-    } else if (po == 0x83) {
-        // 48 83 EC 00 => sub rsp,byte +0x0
+    } else if (po == 0x83 && modrm.mod == 3 && modrm.opecode == 5) {
         // 1000 00sw : 11 101 reg : immediate data
+        // ex) 48 83 EC 00 => sub rsp,byte +0x0
         int8_t imm8 = get_sign_code8(emu, 0);
         emu->rip += 1;
         int64_t val = get_register64(emu, rm);
         set_register64(emu, rm, val-imm8);
+    } else if (po == 0x83 && modrm.mod == 3 && modrm.opecode == 7) {
+        // 1000 00sw : 11 111 reg : immediate data
+        // ex) 48 83 F8 00 => cmp rax,byte +0x0
+        int64_t imm8 = (int64_t) get_sign_code8(emu, 0);
+        emu->rip += 1;
+        int64_t val = (int64_t) get_register64(emu, rm);
+        update_rflags_sub(emu, val, imm8, val-imm8, 0); // TODO: set is_carry
     } else if (po == 0x89 && modrm.mod == 3) {
         // 48 89 C8 => sub rax, rdi
         uint64_t value = get_register64(emu, reg);
