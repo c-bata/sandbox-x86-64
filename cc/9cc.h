@@ -73,6 +73,7 @@ typedef enum {
     ND_WHILE,     // while
     ND_FOR,       // for
     ND_BLOCK,     // { ... }
+    ND_FUNCALL,   // Function call
     ND_EXPR_STMT, // Expression statement ';'
     ND_VAR,       // Variable
     ND_NUM,       // integer
@@ -95,6 +96,9 @@ struct Node {
     Node *els;
     Node *init;
     Node *inc;
+
+    // Function call
+    char *funcname;
 };
 
 Function *parse(Token *tok);

@@ -78,7 +78,7 @@ static Obj *new_lvar(char *name) {
 // | add        = mul ("+" mul | "-" mul)*
 // | mul        = unary ("*" unary | "/" unary)*
 // | unary      = ("+" | "-")? primary
-// | primary    = num | ident | "(" expr ")"
+// | primary    = num | ident ("(" ")")? | "(" expr ")"
 // ↓
 // High Priority
 
@@ -263,6 +263,15 @@ Node *primary(Token **rest, Token *tok) {
         return node;
     }
     if (tok->kind == TK_IDENT) {
+        // Function call
+        if (equal(tok->next, "(")) {
+            Node *node = new_node(ND_FUNCALL);
+            node->funcname = my_strndup(tok->loc, tok->len);
+            *rest = skip(tok->next->next, ")");
+            return node;
+        }
+
+        // Variable
         Obj *var = find_var(tok);
         if (!var)
             var = new_lvar(my_strndup(tok->loc, tok->len));

@@ -38,6 +38,8 @@ static void gen_node(Node *node) {
         printf("%d [label=\"WHILE\" color=orange, style=filled]\n", (int) node);
     } else if (node->kind == ND_FOR) {
         printf("%d [label=\"FOR\" color=orange, style=filled]\n", (int) node);
+    } else if (node->kind == ND_FUNCALL) {
+        printf("%d [label=\"%s()\" color=orange, style=filled]\n", (int) node, node->funcname);
     } else {
         printf("%d [label=\"%d\" color=orange, style=filled]\n", (int) node, node->kind);
     }
