@@ -1,7 +1,11 @@
 #ifndef CC_H_
 #define CC_H_
 
+#define _POSIX_C_SOURCE 200809L
 #include <stdbool.h>
+
+typedef struct Token Token;
+typedef struct Node Node;
 
 //
 // tokenize.c
@@ -14,7 +18,6 @@ typedef enum {
     TK_EOF,   // End-of-file marker
 } TokenKind;
 
-typedef struct Token Token;
 struct Token {
     TokenKind kind;  // Token type
     Token *next;     // Next token
@@ -33,6 +36,22 @@ Token *tokenize(char *p);
 // parse.c
 //
 
+// Local variable
+typedef struct Obj Obj;
+struct Obj {
+    Obj *next;
+    char *name; // Variable name
+    int offset; // Offset from RBP
+};
+
+// Function
+typedef struct Function Function;
+struct Function {
+    Node *body;
+    Obj *locals;
+    int stack_size;
+};
+
 typedef enum {
     ND_ADD,       // +
     ND_SUB,       // -
@@ -49,17 +68,16 @@ typedef enum {
     ND_NUM,       // integer
 } NodeKind;
 
-typedef struct Node Node;
 struct Node {
     NodeKind kind; // node type
     Node *next;    // next node
     Node *lhs;     // left-hand side
     Node *rhs;     // right-hand side
     int val;       // used only if kind==ND_NUM
-    char name;     // used only if kind==ND_VAR
+    Obj *var;      // used only if kind==ND_VAR
 };
 
-Node *parse(Token *tok);
+Function *parse(Token *tok);
 
 //
 // codegen.c
@@ -70,6 +88,6 @@ struct CodeGenOption {
     bool cpu_emu;
 };
 
-void codegen(Node *node, CodeGenOption* option);
+void codegen(Function* prog, CodeGenOption* option);
 
 #endif

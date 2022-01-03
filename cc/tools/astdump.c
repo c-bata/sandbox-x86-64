@@ -1,9 +1,11 @@
+#include <assert.h>
 #include "stdio.h"
 #include "../9cc.h"
 
 static void gen_node(Node *node) {
     if (node->kind == ND_VAR) {
-        printf("%d [label=\"VAR %c\" color=orange, style=filled]\n", (int) node, node->name);
+        assert(node->var != NULL);
+        printf("%d [label=\"VAR %s\" color=orange, style=filled]\n", (int) node, node->var->name);
     } else if (node->kind == ND_ASSIGN) {
         printf("%d [label=\"ASSIGN\" color=orange, style=filled]\n", (int) node);
     } else if (node->kind == ND_NUM) {
@@ -50,10 +52,10 @@ int main(int argc, char **argv) {
     }
 
     Token *tok = tokenize(argv[1]);
-    Node *node = parse(tok);
+    Function *prog = parse(tok);
 
     printf("digraph g{\n");
-    for (Node *n=node; n; n=n->next) {
+    for (Node *n=prog->body; n; n=n->next) {
         gen_node(n);
     }
     printf("}\n");

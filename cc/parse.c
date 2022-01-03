@@ -2,6 +2,10 @@
 #include <string.h>
 #include "9cc.h"
 
+// All local variable instances created during parsing are
+// accumulated to this list.
+Obj *locals;
+
 static bool equal(Token *tok, char *s) {
     return strlen(s) == tok->len && !strncmp(tok->loc, s, tok->len);
 }
@@ -11,6 +15,14 @@ static Token *skip(Token *tok, char *s) {
     if (!equal(tok, s))
         error_tok(tok, "expected '%s'", s);
     return tok->next;
+}
+
+// Find a local variable by name.
+static Obj *find_var(Token *tok) {
+    for (Obj *var = locals; var; var = var->next)
+        if (strlen(var->name) == tok->len && !strncmp(tok->loc, var->name, tok->len))
+            return var;
+    return NULL;
 }
 
 static Node *new_node(NodeKind kind) {
@@ -39,10 +51,18 @@ static Node *new_node_num(int val) {
     return node;
 }
 
-static Node *new_var_node(char c) {
+static Node *new_var_node(Obj* var) {
     Node *node = new_node(ND_VAR);
-    node->name = c;
+    node->var = var;
     return node;
+}
+
+static Obj *new_lvar(char *name) {
+    Obj *var = calloc(1, sizeof(Obj));
+    var->name = name;
+    var->next = locals;
+    locals = var;
+    return var;
 }
 
 // EBNF
@@ -179,7 +199,10 @@ Node *primary(Token **rest, Token *tok) {
         return node;
     }
     if (tok->kind == TK_IDENT) {
-        Node *node = new_var_node(tok->loc[0]);
+        Obj *var = find_var(tok);
+        if (!var)
+            var = new_lvar(strndup(tok->loc, tok->len));
+        Node *node = new_var_node(var);
         *rest = tok->next;
         return node;
     }
@@ -191,11 +214,15 @@ Node *primary(Token **rest, Token *tok) {
     error_tok(tok, "expected an expression");
 }
 
-Node *parse(Token *tok) {
+Function *parse(Token *tok) {
     Node head = {};
     Node *cur = &head;
 
     while (tok->kind != TK_EOF)
         cur = cur->next = stmt(&tok, tok);
-    return head.next;
+
+    Function *prog = calloc(1, sizeof(Function));
+    prog->body = head.next;
+    prog->locals = locals;
+    return prog;
 }
