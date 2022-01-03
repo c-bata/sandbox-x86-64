@@ -17,6 +17,18 @@ static Token *skip(Token *tok, char *s) {
     return tok->next;
 }
 
+char* my_strndup(const char* s, int len) {
+    // Write my own strndup function to avoid
+    // 'strndup.c no such file or directory' error.
+    char* dup = malloc(sizeof(char)*(len+1));
+    int i;
+    for (i=0; i<len; i++) {
+        dup[i] = s[i];
+    }
+    dup[len] = '\0';
+    return dup;
+}
+
 // Find a local variable by name.
 static Obj *find_var(Token *tok) {
     for (Obj *var = locals; var; var = var->next)
@@ -201,7 +213,7 @@ Node *primary(Token **rest, Token *tok) {
     if (tok->kind == TK_IDENT) {
         Obj *var = find_var(tok);
         if (!var)
-            var = new_lvar(strndup(tok->loc, tok->len));
+            var = new_lvar(my_strndup(tok->loc, tok->len));
         Node *node = new_var_node(var);
         *rest = tok->next;
         return node;
