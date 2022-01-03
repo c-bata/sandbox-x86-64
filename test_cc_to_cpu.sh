@@ -3,17 +3,16 @@
 cpu=./cpu/cpu
 compiler=./cc/9cc
 
-mkdir -p tmp
-asm_file="tmp/tmp.asm"
-bin_file="tmp/tmp.bin"
-log_file="tmp/emulator-log.txt"
+asm_file="tmp.asm"
+bin_file="tmp.bin"
+log_file="emulator.log"
 
 assert() {
   local expected="$1"
   local input="$2"
 
-  $compiler --cpuemu "$input" > $asm_file
-  nasm -f bin -o $bin_file $asm_file
+  $compiler --cpuemu "$input" > $asm_file || exit
+  nasm -f bin -o $bin_file $asm_file || exit
   $cpu $bin_file 2> $log_file
   local actual=$?
 

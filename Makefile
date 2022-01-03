@@ -15,6 +15,7 @@ test:
 clean:
 	$(MAKE) clean -C cc
 	$(MAKE) clean -C cpu
+	rm tmp.* emulator.log || true
 
 .PHONY: docker-build
 docker-build:
