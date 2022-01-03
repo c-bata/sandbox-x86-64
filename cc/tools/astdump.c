@@ -10,8 +10,8 @@ static void gen_node(Node *node) {
         printf("%d [label=\"ASSIGN\" color=orange, style=filled]\n", (int) node);
     } else if (node->kind == ND_NUM) {
         printf("%d [label=\"NUM %d\" color=orange, style=filled]\n", (int) node, node->val);
-    //} else if (node->kind == ND_RETURN) {
-    //    printf("%d [label=\"RETURN\" color=orange, style=filled]\n", (int) node);
+    } else if (node->kind == ND_RETURN) {
+        printf("%d [label=\"RETURN\" color=orange, style=filled]\n", (int) node);
     } else if (node->kind == ND_EXPR_STMT) {
         printf("%d [label=\"EXPR_STMT\" color=orange, style=filled]\n", (int) node);
     } else if (node->kind == ND_LE) {

@@ -67,7 +67,8 @@ static Obj *new_lvar(char *name) {
 }
 
 // EBNF
-// | stmt       = expr ";"
+// | program    = stmt*
+// | stmt       = expr ";" | "return" expr ";"
 // | expr       = assign
 // | assign     = equality ("=" assign)?
 // | equality   = relational ("==" relational | "!=" relational)*
@@ -90,7 +91,12 @@ Node *unary(Token **rest, Token *tok);
 Node *primary(Token **rest, Token *tok);
 
 Node *stmt(Token **rest, Token *tok) {
-    Node *node = new_unary(ND_EXPR_STMT, expr(&tok, tok));
+    Node *node;
+    if (equal(tok, "return"))
+        node = new_unary(ND_RETURN, expr(&tok, tok->next));
+    else
+        node = expr(&tok, tok);
+    node = new_unary(ND_EXPR_STMT, node);
     *rest = skip(tok, ";");
     return node;
 }
@@ -219,6 +225,7 @@ Function *parse(Token *tok) {
     Node head = {};
     Node *cur = &head;
 
+    // program = stmt*
     while (tok->kind != TK_EOF)
         cur = cur->next = stmt(&tok, tok);
 
