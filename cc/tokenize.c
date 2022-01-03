@@ -71,6 +71,14 @@ static bool is_alnum(char c) {
     return is_alphabet(c) || ('0' <= c && c <= '9');
 }
 
+static bool is_keyword(Token *tok) {
+    static char *kw[] = {"return", "if", "else", "for", "while"};
+    for (int i = 0; i < sizeof(kw) / sizeof(*kw); i++)
+        if (equal(tok, kw[i]))
+            return true;
+    return false;
+}
+
 // Read a punctuator token from p and returns its length.
 static int read_punct(char *p) {
     if (startswith(p, "==") || startswith(p, "!=") ||
@@ -82,11 +90,7 @@ static int read_punct(char *p) {
 
 static void convert_keywords(Token *tok) {
     for (Token *t = tok; t->kind != TK_EOF; t = t->next)
-        if (equal(t, "return") ||
-            equal(t, "if") ||
-            equal(t, "else") ||
-            equal(t, "while") ||
-            equal(t, "for"))
+        if (is_keyword(t))
             t->kind = TK_KEYWORD;
 }
 
