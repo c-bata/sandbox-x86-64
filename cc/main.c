@@ -34,7 +34,7 @@ int main(int argc, char **argv) {
     }
 
     Token *tok = tokenize(argv[1]);
-    Node *node = parse(tok);
-    codegen(node, options);
+    Function *prog = parse(tok);
+    codegen(prog, options);
     return 0;
 }
