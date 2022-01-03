@@ -6,17 +6,6 @@
 // accumulated to this list.
 Obj *locals;
 
-static bool equal(Token *tok, char *s) {
-    return strlen(s) == tok->len && !strncmp(tok->loc, s, tok->len);
-}
-
-// Ensure that the current token is `s`.
-static Token *skip(Token *tok, char *s) {
-    if (!equal(tok, s))
-        error_tok(tok, "expected '%s'", s);
-    return tok->next;
-}
-
 char* my_strndup(const char* s, int len) {
     // Write my own strndup function to avoid
     // 'strndup.c no such file or directory' error.

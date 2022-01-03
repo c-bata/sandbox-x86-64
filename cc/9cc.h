@@ -11,11 +11,15 @@ typedef struct Node Node;
 // tokenize.c
 //
 
+bool equal(Token *tok, char *s);
+Token *skip(Token *tok, char *s);
+
 typedef enum {
-    TK_IDENT, // Identifiers
-    TK_PUNCT, // Punctuators
-    TK_NUM,   // Numeric literals
-    TK_EOF,   // End-of-file marker
+    TK_IDENT,   // Identifiers
+    TK_PUNCT,   // Punctuators
+    TK_KEYWORD, // Reserved keywords
+    TK_NUM,     // Numeric literals
+    TK_EOF,     // End-of-file marker
 } TokenKind;
 
 struct Token {
@@ -63,6 +67,7 @@ typedef enum {
     ND_LT,        // <
     ND_LE,        // <=
     ND_ASSIGN,    // =
+    ND_RETURN,    // return
     ND_EXPR_STMT, // Expression statement ';'
     ND_VAR,       // Variable
     ND_NUM,       // integer

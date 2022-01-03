@@ -39,6 +39,17 @@ void error_tok(Token *tok, char *fmt, ...) {
     verror_at(tok->loc, fmt, ap);
 }
 
+bool equal(Token *tok, char *s) {
+    return strlen(s) == tok->len && !strncmp(tok->loc, s, tok->len);
+}
+
+// Ensure that the current token is `s`.
+Token *skip(Token *tok, char *s) {
+    if (!equal(tok, s))
+        error_tok(tok, "expected '%s'", s);
+    return tok->next;
+}
+
 // Generate a new token and set to cur->next.
 static Token *new_token(TokenKind kind, char *start, char* end) {
     Token *tok = calloc(1, sizeof(Token));
@@ -69,6 +80,12 @@ static int read_punct(char *p) {
     return ispunct(*p) ? 1 : 0;  // +-*/()<>;
 }
 
+static void convert_keywords(Token *tok) {
+    for (Token *t = tok; t->kind != TK_EOF; t = t->next)
+        if (equal(t, "return"))
+            t->kind = TK_KEYWORD;
+}
+
 Token *tokenize(char *p) {
     current_input = p;
     Token head;
@@ -91,7 +108,7 @@ Token *tokenize(char *p) {
             continue;
         }
 
-        // Identifier
+        // Identifier or Keywords
         if (is_alphabet(*p)) {
             char *start = p;
             do {
@@ -111,5 +128,6 @@ Token *tokenize(char *p) {
         error_at(p, "tokenizer error: '%c'\n", *p);
     }
     cur = cur->next = new_token(TK_EOF, p, p);
+    convert_keywords(head.next);
     return head.next;
 }

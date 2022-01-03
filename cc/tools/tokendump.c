@@ -20,10 +20,10 @@ int main(int argc, char **argv) {
             char base[128] = "PUNCT: \t";
             strncat(base, current->loc, current->len);
             printf("%s\n", base);
-        // } else if (current -> kind == TK_RESERVED) {
-        //     char base[128] = "RESERVED: \t";
-        //     strncat(base, current->loc, current->len);
-        //     printf("%s\n", base);
+        } else if (current -> kind == TK_KEYWORD) {
+            char base[128] = "KEYWORD: \t";
+            strncat(base, current->loc, current->len);
+            printf("%s\n", base);
         } else if (current -> kind == TK_NUM) {
             char base[128] = "NUMBER: \t";
             strncat(base, current->loc, current->len);
