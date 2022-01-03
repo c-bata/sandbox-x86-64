@@ -95,8 +95,7 @@ Node *stmt(Token **rest, Token *tok) {
     if (equal(tok, "return"))
         node = new_unary(ND_RETURN, expr(&tok, tok->next));
     else
-        node = expr(&tok, tok);
-    node = new_unary(ND_EXPR_STMT, node);
+        node = new_unary(ND_EXPR_STMT, node = expr(&tok, tok));
     *rest = skip(tok, ";");
     return node;
 }
