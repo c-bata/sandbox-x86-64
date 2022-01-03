@@ -68,6 +68,9 @@ static Obj *new_lvar(char *name) {
 // EBNF
 // | program    = stmt*
 // | stmt       = expr ";" | "{" stmt* "}" | "return" expr ";"
+// |              | "if" "(" expr ")" stmt ("else" stmt)?
+// |              | "while" "(" expr ")" stmt
+// |              | "for" "(" expr? ";" expr? ";" expr? ")" stmt
 // | expr       = assign
 // | assign     = equality ("=" assign)?
 // | equality   = relational ("==" relational | "!=" relational)*
@@ -95,19 +98,33 @@ Node *stmt(Token **rest, Token *tok) {
         // "{" stmt* "}"
         Node head = {};
         Node *cur = &head;
+        tok = skip(tok, "{");
         while (!equal(tok, "}")) {
-            cur = cur->next = stmt(&tok, tok->next);
+            cur = cur->next = stmt(&tok, tok);
         }
         node = new_node(ND_BLOCK);
         node->body = head.next;
-        *rest = skip(tok, "}");
+        *rest = tok->next;
+        return node;
+    }
+    if (equal(tok, "if")) {
+        node = new_node(ND_IF);
+        tok = skip(tok, "if");
+        tok = skip(tok, "(");
+        node->cond = expr(&tok, tok);
+        tok = skip(tok, ")");
+        node->then = stmt(&tok, tok);
+        if (equal(tok, "else")) {
+            node->els = stmt(&tok, tok->next);
+        }
+        *rest = tok;
         return node;
     }
 
     if (equal(tok, "return")) {
         node = new_unary(ND_RETURN, expr(&tok, tok->next));
     } else {
-        node = new_unary(ND_EXPR_STMT, node = expr(&tok, tok));
+        node = new_unary(ND_EXPR_STMT, expr(&tok, tok));
     }
     *rest = skip(tok, ";");
     return node;

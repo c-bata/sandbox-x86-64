@@ -32,25 +32,35 @@ static void gen_node(Node *node) {
         printf("%d [label=\"/\" color=orange, style=filled]\n", (int) node);
     } else if (node->kind == ND_BLOCK) {
         printf("%d [label=\"{ BLOCK }\" color=orange, style=filled]\n", (int) node);
+    } else if (node->kind == ND_IF) {
+        printf("%d [label=\"{ IF }\" color=orange, style=filled]\n", (int) node);
     } else {
         printf("%d [label=\"%d\" color=orange, style=filled]\n", (int) node, node->kind);
     }
 
     if (node->lhs != NULL) {
-        printf("%d -> %d\n", (int) node, (int) node->lhs);
+        printf("%d -> %d [label=\"lhs\"]\n", (int) node, (int) node->lhs);
         gen_node(node->lhs);
     }
     if (node->rhs != NULL) {
-        printf("%d -> %d\n", (int) node, (int) node->rhs);
+        printf("%d -> %d [label=\"rhs\"]\n", (int) node, (int) node->rhs);
         gen_node(node->rhs);
     }
     if (node->body != NULL) {
-        printf("%d -> %d\n", (int) node, (int) node->body);
+        printf("%d -> %d [label=\"body\"]\n", (int) node, (int) node->body);
         gen_node(node->body);
     }
-    if (node->next != NULL) {
-        printf("%d -> %d\n", (int) node, (int) node->next);
-        gen_node(node->next);
+    if (node->cond != NULL) {
+        printf("%d -> %d [label=\"cond\"]\n", (int) node, (int) node->cond);
+        gen_node(node->cond);
+    }
+    if (node->then != NULL) {
+        printf("%d -> %d [label=\"then\"]\n", (int) node, (int) node->then);
+        gen_node(node->then);
+    }
+    if (node->els != NULL) {
+        printf("%d -> %d [label=\"els\"]\n", (int) node, (int) node->els);
+        gen_node(node->els);
     }
 }
 

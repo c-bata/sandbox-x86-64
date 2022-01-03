@@ -68,6 +68,10 @@ typedef enum {
     ND_LE,        // <=
     ND_ASSIGN,    // =
     ND_RETURN,    // return
+    ND_IF,        // if
+    ND_ELSE,      // else
+    ND_WHILE,     // while
+    ND_FOR,       // for
     ND_BLOCK,     // { ... }
     ND_EXPR_STMT, // Expression statement ';'
     ND_VAR,       // Variable
@@ -79,9 +83,16 @@ struct Node {
     Node *next;    // next node
     Node *lhs;     // left-hand side
     Node *rhs;     // right-hand side
-    Node *body;    // block
     int val;       // used only if kind==ND_NUM
     Obj *var;      // used only if kind==ND_VAR
+
+    // Block
+    Node *body;
+
+    // "if" statement
+    Node *cond;
+    Node *then;
+    Node *els;
 };
 
 Function *parse(Token *tok);

@@ -82,7 +82,11 @@ static int read_punct(char *p) {
 
 static void convert_keywords(Token *tok) {
     for (Token *t = tok; t->kind != TK_EOF; t = t->next)
-        if (equal(t, "return"))
+        if (equal(t, "return") ||
+            equal(t, "if") ||
+            equal(t, "else") ||
+            equal(t, "while") ||
+            equal(t, "for"))
             t->kind = TK_KEYWORD;
 }
 
