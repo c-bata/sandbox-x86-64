@@ -78,6 +78,17 @@ assert 6 'a=b=3; return a+b;'
 assert 1 '{ return 1; }'
 assert 6 '{ a=b=3; return a+b; }'
 
+assert 3 '{ if (0) return 2; return 3; }'
+assert 3 '{ if (1-1) return 2; return 3; }'
+assert 2 '{ if (1) return 2; return 3; }'
+assert 2 '{ if (2-1) return 2; return 3; }'
+assert 4 '{ if (0) { 1; 2; return 3; } else { return 4; } }'
+assert 3 '{ if (1) { 1; 2; return 3; } else { return 4; } }'
+
+assert 0 'a = 5; while (a) { a = a-1; } return a;'
+assert 1 'a = 5; while (a) { a = a-1; } return a+1;'
+assert 10 '{ i=0; while(i<10) { i=i+1; } return i; }'
+
 # failure case
 echo ""
 echo "Failure case:"

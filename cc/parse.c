@@ -120,12 +120,22 @@ Node *stmt(Token **rest, Token *tok) {
         *rest = tok;
         return node;
     }
-
+    if (equal(tok, "while")) {
+        node = new_node(ND_WHILE);
+        tok = skip(tok, "while");
+        tok = skip(tok, "(");
+        node->cond = expr(&tok, tok);
+        tok = skip(tok, ")");
+        node->then = stmt(&tok, tok);
+        *rest = tok;
+        return node;
+    }
     if (equal(tok, "return")) {
         node = new_unary(ND_RETURN, expr(&tok, tok->next));
-    } else {
-        node = new_unary(ND_EXPR_STMT, expr(&tok, tok));
+        *rest = skip(tok, ";");
+        return node;
     }
+    node = new_unary(ND_EXPR_STMT, expr(&tok, tok));
     *rest = skip(tok, ";");
     return node;
 }

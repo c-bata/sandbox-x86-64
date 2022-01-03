@@ -7,7 +7,7 @@ static void gen_node(Node *node) {
         assert(node->var != NULL);
         printf("%d [label=\"VAR %s\" color=orange, style=filled]\n", (int) node, node->var->name);
     } else if (node->kind == ND_ASSIGN) {
-        printf("%d [label=\"ASSIGN\" color=orange, style=filled]\n", (int) node);
+        printf("%d [label=\"=\" color=orange, style=filled]\n", (int) node);
     } else if (node->kind == ND_NUM) {
         printf("%d [label=\"NUM %d\" color=orange, style=filled]\n", (int) node, node->val);
     } else if (node->kind == ND_RETURN) {
@@ -33,7 +33,11 @@ static void gen_node(Node *node) {
     } else if (node->kind == ND_BLOCK) {
         printf("%d [label=\"{ BLOCK }\" color=orange, style=filled]\n", (int) node);
     } else if (node->kind == ND_IF) {
-        printf("%d [label=\"{ IF }\" color=orange, style=filled]\n", (int) node);
+        printf("%d [label=\"IF\" color=orange, style=filled]\n", (int) node);
+    } else if (node->kind == ND_WHILE) {
+        printf("%d [label=\"WHILE\" color=orange, style=filled]\n", (int) node);
+    } else if (node->kind == ND_FOR) {
+        printf("%d [label=\"FOR\" color=orange, style=filled]\n", (int) node);
     } else {
         printf("%d [label=\"%d\" color=orange, style=filled]\n", (int) node, node->kind);
     }

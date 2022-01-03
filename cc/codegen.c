@@ -98,6 +98,7 @@ static void gen_expr(Node* node) {
 }
 
 static void gen_stmt(Node* node) {
+    int unique_label;
     switch (node->kind) {
         case ND_BLOCK:
             for (Node *n = node->body; n; n=n->next)
@@ -113,7 +114,7 @@ static void gen_stmt(Node* node) {
         case ND_IF:
             gen_expr(node->cond);  // cond -> rax
             printf("  cmp rax, 0\n");
-            int unique_label = gen_unique_num();
+            unique_label = gen_unique_num();
             if (node->els == NULL) {
                 printf("  je .Lend%d\n", unique_label);
                 gen_stmt(node->then);
@@ -126,6 +127,16 @@ static void gen_stmt(Node* node) {
                 gen_stmt(node->els);
                 printf(".Lend%d:\n", unique_label);
             }
+            return;
+        case ND_WHILE:
+            unique_label = gen_unique_num();
+            printf(".Lbegin%d:\n", unique_label);
+            gen_expr(node->cond);
+            printf("  cmp rax, 0\n");
+            printf("  je .Lend%d\n", unique_label);
+            gen_stmt(node->then);
+            printf("  jmp .Lbegin%d\n", unique_label);
+            printf(".Lend%d:\n", unique_label);
             return;
     }
     error("invalid statement");
