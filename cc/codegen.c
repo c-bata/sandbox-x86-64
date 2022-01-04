@@ -26,14 +26,20 @@ static int gen_unique_num(void) {
 // Compute the absolute address of a given node.
 // It's an error if a given node does not reside in memory.
 static void gen_addr(Node *node) {
-    if (node->kind == ND_VAR) {
-        assert(node->var != NULL);
-        // "lea dst, [src]" calculates the absolute address of src,
-        // then load it into rax.
-        printf("  lea rax, [rbp-%d]\n", -node->var->offset);
-        return;
+    switch (node->kind) {
+        case ND_VAR:
+            assert(node->var != NULL);
+            // "lea dst, [src]" calculates the absolute address of src,
+            // then load it into rax.
+            printf("  lea rax, [rbp-%d]\n", -node->var->offset);
+            return;
+        case ND_DEREF:
+            // ex) *x = 5;
+            gen_expr(node->lhs);  // pointer x (address) -> rax
+            return;
+        default:
+            error("not an lvalue");
     }
-    error("not an lvalue");
 }
 
 static void gen_expr(Node* node) {
