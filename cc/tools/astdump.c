@@ -30,6 +30,10 @@ static void gen_node(Node *node) {
         printf("%d [label=\"*\" color=orange, style=filled]\n", (int) node);
     } else if (node->kind == ND_DIV) {
         printf("%d [label=\"/\" color=orange, style=filled]\n", (int) node);
+    } else if (node->kind == ND_ADDR) {
+        printf("%d [label=\"ADDR &\" color=orange, style=filled]\n", (int) node);
+    } else if (node->kind == ND_DEREF) {
+        printf("%d [label=\"DEREF *\" color=orange, style=filled]\n", (int) node);
     } else if (node->kind == ND_BLOCK) {
         printf("%d [label=\"{ BLOCK }\" color=orange, style=filled]\n", (int) node);
     } else if (node->kind == ND_IF) {

@@ -77,7 +77,7 @@ static Obj *new_lvar(char *name) {
 // | relational = add ("<" add | "<=" add | ">" add | ">=" add)*
 // | add        = mul ("+" mul | "-" mul)*
 // | mul        = unary ("*" unary | "/" unary)*
-// | unary      = ("+" | "-")? primary
+// | unary      = ("+" | "-" | "*" | "&")? unary | primary
 // | primary    = num | ident ("(" (assign ("," assign)*)? ")")? | "(" expr ")"
 // ↓
 // High Priority
@@ -252,6 +252,14 @@ static Node *unary(Token **rest, Token *tok) {
 
     if (equal(tok, "-")) {
         return new_unary(ND_NEG, unary(rest, tok->next));
+    }
+
+    if (equal(tok, "&")) {
+        return new_unary(ND_ADDR, unary(rest, tok->next));
+    }
+
+    if (equal(tok, "*")) {
+        return new_unary(ND_DEREF, unary(rest, tok->next));
     }
     return primary(rest, tok);
 }
