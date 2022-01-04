@@ -82,17 +82,17 @@ static Obj *new_lvar(char *name) {
 // ↓
 // High Priority
 
-Node *stmt(Token **rest, Token *tok);
-Node *expr(Token **rest, Token *tok);
-Node *assign(Token **rest, Token *tok);
-Node *equality(Token **rest, Token *tok);
-Node *relational(Token **rest, Token *tok);
-Node *add(Token **rest, Token *tok);
-Node *mul(Token **rest, Token *tok);
-Node *unary(Token **rest, Token *tok);
-Node *primary(Token **rest, Token *tok);
+static Node *stmt(Token **rest, Token *tok);
+static Node *expr(Token **rest, Token *tok);
+static Node *assign(Token **rest, Token *tok);
+static Node *equality(Token **rest, Token *tok);
+static Node *relational(Token **rest, Token *tok);
+static Node *add(Token **rest, Token *tok);
+static Node *mul(Token **rest, Token *tok);
+static Node *unary(Token **rest, Token *tok);
+static Node *primary(Token **rest, Token *tok);
 
-Node *stmt(Token **rest, Token *tok) {
+static Node *stmt(Token **rest, Token *tok) {
     Node *node;
     if (equal(tok, "{")) {
         // "{" stmt* "}"
@@ -158,11 +158,11 @@ Node *stmt(Token **rest, Token *tok) {
     return node;
 }
 
-Node *expr(Token **rest, Token *tok) {
+static Node *expr(Token **rest, Token *tok) {
     return assign(rest, tok);
 }
 
-Node *assign(Token **rest, Token *tok) {
+static Node *assign(Token **rest, Token *tok) {
     Node *node = equality(&tok, tok);
     for (;;) {
         if (equal(tok, "=")) {
@@ -174,7 +174,7 @@ Node *assign(Token **rest, Token *tok) {
     }
 }
 
-Node *equality(Token **rest, Token *tok) {
+static Node *equality(Token **rest, Token *tok) {
     Node* node = relational(&tok, tok);
     for (;;) {
         if (equal(tok, "==")) {
@@ -190,7 +190,7 @@ Node *equality(Token **rest, Token *tok) {
     }
 }
 
-Node *relational(Token **rest, Token *tok) {
+static Node *relational(Token **rest, Token *tok) {
     Node* node = add(&tok, tok);
     for (;;) {
         if (equal(tok, "<")) {
@@ -214,7 +214,7 @@ Node *relational(Token **rest, Token *tok) {
     }
 }
 
-Node *add(Token **rest, Token *tok) {
+static Node *add(Token **rest, Token *tok) {
     Node *node = mul(&tok, tok);
     for (;;) {
         if (equal(tok, "+")) {
@@ -230,7 +230,7 @@ Node *add(Token **rest, Token *tok) {
     }
 }
 
-Node *mul(Token **rest, Token *tok) {
+static Node *mul(Token **rest, Token *tok) {
     Node *node = unary(&tok, tok);
     for (;;) {
         if (equal(tok, "*")) {
@@ -246,7 +246,7 @@ Node *mul(Token **rest, Token *tok) {
     }
 }
 
-Node *unary(Token **rest, Token *tok) {
+static Node *unary(Token **rest, Token *tok) {
     if (equal(tok, "+"))
         return unary(rest, tok->next);
 
@@ -256,7 +256,7 @@ Node *unary(Token **rest, Token *tok) {
     return primary(rest, tok);
 }
 
-Node *primary(Token **rest, Token *tok) {
+static Node *primary(Token **rest, Token *tok) {
     if (equal(tok, "(")) {
         Node *node = expr(&tok, tok->next);
         *rest = skip(tok, ")");
