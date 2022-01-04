@@ -76,6 +76,14 @@ static void gen_node(Node *node) {
         printf("%d -> %d [label=\"els\"]\n", (int) node, (int) node->els);
         gen_node(node->els);
     }
+    if (node->args != NULL) {
+        printf("%d -> %d [label=\"args\"]\n", (int) node, (int) node->args);
+        gen_node(node->args);
+    }
+    if (node->next != NULL) {
+        printf("%d -> %d [label=\"next\"]\n", (int) node, (int) node->next);
+        gen_node(node->next);
+    }
 }
 
 int main(int argc, char **argv) {
@@ -88,9 +96,7 @@ int main(int argc, char **argv) {
     Function *prog = parse(tok);
 
     printf("digraph g{\n");
-    for (Node *n=prog->body; n; n=n->next) {
-        gen_node(n);
-    }
+    gen_node(prog->body);
     printf("}\n");
     return 0;
 }

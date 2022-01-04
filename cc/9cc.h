@@ -99,6 +99,7 @@ struct Node {
 
     // Function call
     char *funcname;
+    Node *args;
 };
 
 Function *parse(Token *tok);

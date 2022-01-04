@@ -3,6 +3,7 @@
 #include "9cc.h"
 
 static int depth;
+static char *argreg[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 static bool emu_mode = false;
 
 static void push(void) {
@@ -53,7 +54,7 @@ static void gen_expr(Node* node) {
             gen_addr(node); // address -> rax
             printf("  mov rax, [rax]\n");  // [address] -> rax
             return;
-        case ND_FUNCALL:
+        case ND_FUNCALL: {
             printf("  mov rax, 0\n");
 #ifdef __linux
             printf("  call %s\n", node->funcname); // ret -> rax
@@ -61,6 +62,7 @@ static void gen_expr(Node* node) {
             printf("  call _%s\n", node->funcname); // ret -> rax
 #endif
             return;
+        }
     }
 
     gen_expr(node->rhs); // rhs -> rax

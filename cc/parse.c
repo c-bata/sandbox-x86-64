@@ -78,7 +78,7 @@ static Obj *new_lvar(char *name) {
 // | add        = mul ("+" mul | "-" mul)*
 // | mul        = unary ("*" unary | "/" unary)*
 // | unary      = ("+" | "-")? primary
-// | primary    = num | ident ("(" ")")? | "(" expr ")"
+// | primary    = num | ident ("(" (assign ("," assign)*)? ")")? | "(" expr ")"
 // ↓
 // High Priority
 
@@ -267,7 +267,18 @@ Node *primary(Token **rest, Token *tok) {
         if (equal(tok->next, "(")) {
             Node *node = new_node(ND_FUNCALL);
             node->funcname = my_strndup(tok->loc, tok->len);
-            *rest = skip(tok->next->next, ")");
+            tok = skip(tok->next, "(");
+
+            Node head = {};
+            Node *cur = &head;
+            while (!equal(tok, ")")) {
+                if (cur != &head)
+                    tok = skip(tok, ",");
+                cur = cur->next = assign(&tok, tok);
+            }
+            node->args = head.next;
+
+            *rest = skip(tok, ")");
             return node;
         }
 
