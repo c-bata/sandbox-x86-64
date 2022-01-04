@@ -111,7 +111,12 @@ assert 8 '{ return add(3, 5); }'
 assert 2 '{ return sub(5, 3); }'
 assert 21 '{ return add6(1,2,3,4,5,6); }'
 assert 66 '{ return add6(1,2,add6(3,4,5,6,7,8),9,10,11); }'
-assert 136 '{ return add6(1,2,add6(3,add6(4,5,6,7,8,9),10,11,12,13),14,15,16);
+assert 136 '{ return add6(1,2,add6(3,add6(4,5,6,7,8,9),10,11,12,13),14,15,16); }'
+
+assert 3 '{ x=3; return *&x; }'
+assert 3 '{ x=3; y=&x; z=&y; return **z; }'
+assert 5 '{ x=3; y=5; return *(&x+8); }'
+assert 3 '{ x=3; y=5; return *(&y-8); }'
 
 # failure case
 echo ""

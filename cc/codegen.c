@@ -6,6 +6,8 @@ static int depth;
 static char *argreg[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 static bool emu_mode = false;
 
+static void gen_expr(Node* node);
+
 static void push(void) {
     printf("  push rax\n");
     depth++;
@@ -52,6 +54,13 @@ static void gen_expr(Node* node) {
             return;
         case ND_VAR:
             gen_addr(node); // address -> rax
+            printf("  mov rax, [rax]\n");  // [address] -> rax
+            return;
+        case ND_ADDR:
+            gen_addr(node->lhs);  // address -> rax
+            return;
+        case ND_DEREF:
+            gen_expr(node->lhs);  // address -> rax
             printf("  mov rax, [rax]\n");  // [address] -> rax
             return;
         case ND_FUNCALL: {
