@@ -53,6 +53,14 @@ static void gen_expr(Node* node) {
             gen_addr(node); // address -> rax
             printf("  mov rax, [rax]\n");  // [address] -> rax
             return;
+        case ND_FUNCALL:
+            printf("  mov rax, 0\n");
+#ifdef __linux
+            printf("  call %s\n", node->funcname); // ret -> rax
+#else
+            printf("  call _%s\n", node->funcname); // ret -> rax
+#endif
+            return;
     }
 
     gen_expr(node->rhs); // rhs -> rax

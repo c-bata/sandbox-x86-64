@@ -98,6 +98,9 @@ assert 55 '{ i=0; j=0; for (i=0; i<=10; i=i+1) j=i+j; return j; }'
 assert 55 '{ i=0; j=0; for (; i<=10; i=i+1) j=i+j; return j; }'
 assert 3 '{ for (;;) {return 3;} return 5; }'
 
+assert 3 '{ return ret3(); }'
+assert 5 '{ return ret5(); }'
+
 # failure case
 echo ""
 echo "Failure case:"
