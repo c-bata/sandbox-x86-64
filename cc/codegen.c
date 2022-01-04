@@ -56,6 +56,17 @@ static void gen_expr(Node* node) {
             return;
         case ND_FUNCALL: {
             printf("  mov rax, 0\n");
+
+            int nargs = 0;
+            for (Node *arg = node->args; arg; arg = arg->next) {
+                gen_expr(arg);
+                push();
+                nargs++;
+            }
+
+            for (int i = nargs-1; i>=0; i--)
+                pop(argreg[i]);
+
 #ifdef __linux
             printf("  call %s\n", node->funcname); // ret -> rax
 #else
