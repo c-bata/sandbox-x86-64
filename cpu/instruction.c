@@ -399,6 +399,11 @@ static void rex_prefix(Emulator* emu) {
     } else if (po == 0x8D) {
         printf("not implemented: rex_prefix=0x8D / mod=%d rm=%d\n", modrm.mod, modrm.rm);
         exit(1);
+    } else if (po == 0xC7) {
+        // ex) 48 c7 c0 0a 00 00 00 => movq $0xa, %rax
+        uint64_t value = get_sign_code32(emu, 0);
+        set_register64(emu, rm, value);
+        emu->rip += 4;
     } else if (po == 0xF7 && modrm.opecode == 7) {
         // Signed Divide - 1111 011w : 11 111 reg
         // 48 F7 FF => idiv rdi(7)
