@@ -1,10 +1,11 @@
 #include <string.h>
 #include <stdlib.h>
 #include "emulator_function.h"
+#include "virtual_memory.h"
 
-Emulator* create_emu(size_t size, uint64_t rip, uint64_t rsp) {
+Emulator* create_emu(uint64_t rip, uint64_t rsp) {
     Emulator* emu = malloc(sizeof(Emulator));
-    emu->memory = malloc(size);
+    emu->memory = vm_init();
 
     memset(emu->registers, 0, sizeof(emu->registers));
     emu->rip = rip;
@@ -18,11 +19,11 @@ void destroy_emu(Emulator* emu) {
 }
 
 uint8_t get_code8(Emulator* emu, int index) {
-    return emu->memory[emu->rip + index];
+    return vm_get_memory8(emu->memory, emu->rip + index);
 }
 
 int8_t get_sign_code8(Emulator* emu, int index) {
-    return (int8_t)emu->memory[emu->rip + index];
+    return (int8_t)get_code8(emu, index);
 }
 
 uint32_t get_code32(Emulator* emu, int index) {
@@ -41,7 +42,7 @@ int32_t get_sign_code32(Emulator* emu, int index) {
 }
 
 void set_memory8(Emulator* emu, uint64_t address, uint64_t value) {
-    emu->memory[address] = value & 0xFF;
+    vm_set_memory8(emu->memory, address, value & 0xFF);
 }
 
 void set_memory32(Emulator* emu, uint64_t address, uint64_t value) {
@@ -59,7 +60,7 @@ void set_memory64(Emulator* emu, uint64_t address, uint64_t value) {
 }
 
 uint64_t get_memory8(Emulator* emu, uint64_t address) {
-    return (uint32_t) emu->memory[address];
+    return vm_get_memory8(emu->memory, address);
 }
 
 uint64_t get_memory32(Emulator* emu, uint64_t address) {
@@ -80,7 +81,6 @@ uint64_t get_memory64(Emulator* emu, uint64_t address) {
     return ret;
 }
 
-// TODO: should be removed
 uint64_t get_register32(Emulator* emu, int index) {
     return emu->registers[index];
 }

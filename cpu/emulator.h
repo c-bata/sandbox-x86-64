@@ -2,6 +2,7 @@
 #define EMULATOR_H_
 
 #include <stdint.h>
+#include "virtual_memory.h"
 
 enum Register {
     RAX, RCX, RDX, RBX, RSP, RBP, RSI, RDI,
@@ -13,7 +14,7 @@ enum Register {
 typedef struct {
     uint64_t registers[REGISTERS_COUNT];
     uint64_t rflags;
-    uint8_t* memory;  // Memory (byte array)
+    VirtualMemory* memory;  // Memory (byte array)
     uint64_t rip;
 } Emulator;
 

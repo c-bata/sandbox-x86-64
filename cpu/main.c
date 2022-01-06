@@ -9,8 +9,6 @@
 #include "macho.h"
 #include "instruction.h"
 
-#define MEMORY_SIZE (1024 * 1024)
-
 bool quiet = false;
 
 enum formats {
@@ -90,14 +88,14 @@ int main(int argc, char* argv[]) {
     if (format == MACHO64) {
         emu = init_emu_from_macho(argv[1]);
     } else if (format == BIN) {
-        emu = create_emu(MEMORY_SIZE, 0x7c00, 0x7c00);
+        emu = create_emu(0x7c00, 0x7c00);
 
         FILE* binary = fopen(argv[1], "rb");
         if (binary == NULL) {
             errorf("cannot open file '%s'\n", argv[1]);
         }
         // read machine program (max 512 bytes)
-        fread(emu->memory + 0x7c00, 1, 0x200, binary);
+        vm_fread(emu->memory, 0x7c00, binary, 0x200);
         fclose(binary);
     } else {
         errorf("unsupported format: %d", format);
@@ -105,9 +103,9 @@ int main(int argc, char* argv[]) {
 
     init_instructions();
 
-    while (emu->rip < MEMORY_SIZE) {
+    while (1) {
         uint8_t code = get_code8(emu, 0);
-        debugf("RIP = %X, Code = %02X\n", emu->rip, code);
+        debugf("RIP = %llx, Code = %02X\n", emu->rip, code);
 
         if (instructions[code] == NULL) {
             printf("\n\nNot Implemented: %x\n", code);

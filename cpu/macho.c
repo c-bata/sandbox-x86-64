@@ -7,25 +7,11 @@
 #include "emulator.h"
 #include "emulator_function.h"
 
-#define MEMORY_SIZE (1024 * 1024)
-
 typedef struct {
     uint64_t vm_addr;
     uint64_t machine_code_offset;
     size_t machine_code_size;
 } MachO;
-
-static void dump_bytes(uint8_t* bytes, size_t size) {
-    int i;
-    for (i=0; i<size; i++) {
-        if (i == 0)
-            printf("\t");
-        else if (i%10 == 0)
-            printf("\n\t");
-        printf("%02X", bytes[i]);
-    }
-    printf("\n");
-}
 
 static void *load_bytes(FILE *obj_file, off_t offset, size_t size) {
     void *buf = malloc(size);
@@ -101,13 +87,10 @@ Emulator* init_emu_from_macho(char* filepath) {
 
     MachO* macho = malloc(sizeof(MachO));
     load_macho(obj_file, macho);
-    Emulator* emu = create_emu(MEMORY_SIZE, macho->vm_addr, macho->vm_addr);
 
-    fread(emu->memory + macho->vm_addr, 1, macho->machine_code_size, obj_file);
-
+    Emulator* emu = create_emu(macho->vm_addr, macho->vm_addr);
+    fseek(obj_file, macho->machine_code_offset, SEEK_SET);
+    vm_fread(emu->memory, macho->vm_addr, obj_file, macho->machine_code_size);
     fclose(obj_file);
-
-    // DEBUG:
-    dump_bytes(emu->memory, macho->machine_code_size);
     return emu;
 }
