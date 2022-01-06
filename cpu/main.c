@@ -6,6 +6,7 @@
 #include <stdbool.h>
 
 #include "emulator_function.h"
+#include "macho.h"
 #include "instruction.h"
 
 #define MEMORY_SIZE (1024 * 1024)
@@ -62,7 +63,6 @@ int opt_remove_at(int argc, char* argv[], int index) {
 }
 
 int main(int argc, char* argv[]) {
-    FILE* binary;
     Emulator* emu;
     int i = 1;
     while (i < argc) {
@@ -88,16 +88,17 @@ int main(int argc, char* argv[]) {
     }
 
     if (format == MACHO64) {
-        errorf("implemented me\n");
+        emu = init_emu_from_macho(argv[1]);
     } else if (format == BIN) {
         emu = create_emu(MEMORY_SIZE, 0x7c00, 0x7c00);
 
-        binary = fopen(argv[1], "rb");
+        FILE* binary = fopen(argv[1], "rb");
         if (binary == NULL) {
             errorf("cannot open file '%s'\n", argv[1]);
         }
         // read machine program (max 512 bytes)
         fread(emu->memory + 0x7c00, 1, 0x200, binary);
+        fclose(binary);
     } else {
         errorf("unsupported format: %d", format);
     }
@@ -125,6 +126,5 @@ int main(int argc, char* argv[]) {
 
     int exit_status = (int) emu->registers[RAX];
     destroy_emu(emu);
-    fclose(binary);
     return exit_status;
 }
