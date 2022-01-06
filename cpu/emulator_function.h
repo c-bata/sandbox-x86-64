@@ -10,6 +10,9 @@
 #define SIGN_FLAG (1 << 7)
 #define OVERFLOW_FLAG (1 << 11)
 
+Emulator* create_emu(size_t size, uint64_t rip, uint64_t rsp);
+void destroy_emu(Emulator* emu);
+
 uint8_t get_code8(Emulator* emu, int index);
 int8_t get_sign_code8(Emulator* emu, int index);
 uint32_t get_code32(Emulator* emu, int index);

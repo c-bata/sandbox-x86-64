@@ -40,21 +40,6 @@ void errorf(char *fmt, ...) {
     exit(1);
 }
 
-Emulator* create_emu(size_t size, uint64_t rip, uint64_t rsp) {
-    Emulator* emu = malloc(sizeof(Emulator));
-    emu->memory = malloc(size);
-
-    memset(emu->registers, 0, sizeof(emu->registers));
-    emu->rip = rip;
-    emu->registers[RSP] = rsp;
-    return emu;
-}
-
-void destroy_emu(Emulator* emu) {
-    free(emu->memory);
-    free(emu);
-}
-
 static void dump_registers(Emulator* emu) {
     int i;
     for (i = 0; i < REGISTERS_COUNT; i++) {

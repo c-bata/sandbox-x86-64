@@ -1,4 +1,21 @@
+#include <string.h>
+#include <stdlib.h>
 #include "emulator_function.h"
+
+Emulator* create_emu(size_t size, uint64_t rip, uint64_t rsp) {
+    Emulator* emu = malloc(sizeof(Emulator));
+    emu->memory = malloc(size);
+
+    memset(emu->registers, 0, sizeof(emu->registers));
+    emu->rip = rip;
+    emu->registers[RSP] = rsp;
+    return emu;
+}
+
+void destroy_emu(Emulator* emu) {
+    free(emu->memory);
+    free(emu);
+}
 
 uint8_t get_code8(Emulator* emu, int index) {
     return emu->memory[emu->rip + index];
