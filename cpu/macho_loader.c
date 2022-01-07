@@ -1,11 +1,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <mach-o/loader.h>
-#include <mach-o/fat.h>
-
 #include "emulator.h"
 #include "emulator_function.h"
+
+#ifdef __linux
+
+Emulator* load_macho64(char* filepath) {
+    fprintf(stderr, "Mach-O 64 binary is not supported on Linux\n");
+    exit(EXIT_FAILURE);
+}
+
+#else
+
+#include <mach-o/loader.h>
+#include <mach-o/fat.h>
 
 typedef struct {
     uint64_t vm_addr;
@@ -78,7 +87,7 @@ void load_macho(FILE *obj_file, MachO *macho) {
     free(cmd);
 }
 
-Emulator* init_emu_from_macho(char* filepath) {
+Emulator* load_macho64(char* filepath) {
     FILE *obj_file = fopen(filepath, "rb");
     if (obj_file == NULL) {
         printf("'%s' could not be opened.\n", filepath);
@@ -94,3 +103,4 @@ Emulator* init_emu_from_macho(char* filepath) {
     fclose(obj_file);
     return emu;
 }
+#endif

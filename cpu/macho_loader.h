@@ -4,6 +4,6 @@
 #include <stdint.h>
 #include "emulator.h"
 
-Emulator* init_emu_from_macho(char* filepath);
+Emulator* load_macho64(char* filepath);
 
 #endif

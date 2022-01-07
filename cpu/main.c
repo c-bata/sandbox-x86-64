@@ -6,7 +6,7 @@
 #include <stdbool.h>
 
 #include "emulator_function.h"
-#include "macho.h"
+#include "macho_loader.h"
 #include "instruction.h"
 
 bool quiet = false;
@@ -86,7 +86,7 @@ int main(int argc, char* argv[]) {
     }
 
     if (format == MACHO64) {
-        emu = init_emu_from_macho(argv[1]);
+        emu = load_macho64(argv[1]);
     } else if (format == BIN) {
         emu = create_emu(0x7c00, 0x7c00);
 
