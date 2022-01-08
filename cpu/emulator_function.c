@@ -190,6 +190,23 @@ void set_overflow(Emulator* emu, int is_overflow) {
     }
 }
 
+int carry_flag_sub(uint64_t v1, uint64_t v2) {
+    int sign1 = v1 >> 63;
+    int signr = (v1 - v2) >> 63;
+    int is_carry = (sign1 == 0) && (signr == 1);
+    return is_carry;
+}
+
+int carry_flag_add(uint64_t v1, uint64_t v2) {
+    int sign1 = v1 >> 63;
+    int sign2 = v2 >> 63;
+    if (sign1 == 1 && sign2 == 2) {
+        return 1;
+    }
+    int signr = (v1 + v2) >> 63;
+    return (sign1 + sign2) >= 1 && (signr == 0);
+}
+
 void update_rflags_sub(Emulator* emu, uint64_t v1, uint64_t v2, uint64_t result, int is_carry) {
     int sign1 = v1 >> 63;
     int sign2 = v2 >> 63;

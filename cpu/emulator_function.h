@@ -39,6 +39,9 @@ void push64(Emulator* emu, uint64_t value);
 uint64_t pop64(Emulator* emu);
 
 void update_rflags_sub(Emulator* emu, uint64_t v1, uint64_t v2, uint64_t result, int is_carry);
+int carry_flag_add(uint64_t v1, uint64_t v2);
+int carry_flag_sub(uint64_t v1, uint64_t v2);
+
 int is_carry(Emulator* emu);
 int is_zero(Emulator* emu);
 int is_sign(Emulator* emu);

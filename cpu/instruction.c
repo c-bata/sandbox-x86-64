@@ -340,17 +340,23 @@ static void rex_prefix(Emulator* emu) {
         uint64_t v1 = get_register64(emu, rm);
         uint64_t v2 = get_register64(emu, reg);
         set_register64(emu, rm, v1 + v2);
+
+        int is_carry = carry_flag_add(v1, v2);
+        update_rflags_sub(emu, v1, v2, v1 + v2, is_carry);
     } else if (po == 0x29) {
         // 48 29 F8 => sub rax, rdi
         uint64_t v1 = get_register64(emu, rm);
         uint64_t v2 = get_register64(emu, reg);
         set_register64(emu, rm, v1 - v2);
+
+        int is_carry = carry_flag_sub(v1, v2);
+        update_rflags_sub(emu, v1, v2, v1 - v2, is_carry);
     } else if (po == 0x39) {
         // 48 39 F8 => cmp rax, rdi
         uint64_t v1 = get_register64(emu, rm);
         uint64_t v2 = get_register64(emu, reg);
-        uint64_t result = v1 - v2;
-        int is_carry = ((v1 >> 63) == 0) && ((result >> 63) == 1);
+
+        int is_carry = carry_flag_sub(v1, v2);
         update_rflags_sub(emu, v1, v2, v1 - v2, is_carry);
     } else if (po == 0x81) {
         // SUB: immediate -> register
@@ -360,6 +366,9 @@ static void rex_prefix(Emulator* emu) {
         uint64_t v1 = get_register64(emu, rm);
         set_register64(emu, rm, v1 - v2);
         emu->rip += 4;
+
+        int is_carry = carry_flag_sub(v1, v2);
+        update_rflags_sub(emu, v1, v2, v1 - v2, is_carry);
     } else if (po == 0x83 && modrm.mod == 3 && modrm.opecode == 5) {
         // 1000 00sw : 11 101 reg : immediate data
         // ex) 48 83 EC 00 => sub rsp,byte +0x0
@@ -367,6 +376,9 @@ static void rex_prefix(Emulator* emu) {
         emu->rip += 1;
         int64_t val = get_register64(emu, rm);
         set_register64(emu, rm, val-imm8);
+
+        int is_carry = carry_flag_sub(val, imm8);
+        update_rflags_sub(emu, val, imm8, val - imm8, is_carry);
     } else if (po == 0x83 && modrm.mod == 3 && modrm.opecode == 7) {
         // 1000 00sw : 11 111 reg : immediate data
         // ex) 48 83 F8 00 => cmp rax,byte +0x0
@@ -375,10 +387,10 @@ static void rex_prefix(Emulator* emu) {
         int64_t val = (int64_t) get_register64(emu, rm);
         uint64_t result = val - imm8;
 
-        int is_carry = ((val >> 63) == 0) && ((imm8 >> 63) == 1);
+        int is_carry = carry_flag_sub(val, imm8);
         update_rflags_sub(emu, val, imm8, result, is_carry);
     } else if (po == 0x89 && modrm.mod == 3) {
-        // 48 89 C8 => sub rax, rdi
+        // 48 89 C8 => mov rax, rdi
         uint64_t value = get_register64(emu, reg);
         set_register64(emu, rm, value);
     } else if (po == 0x89 && modrm.mod == 0) {
