@@ -349,7 +349,8 @@ static void rex_prefix(Emulator* emu) {
         // 48 39 F8 => cmp rax, rdi
         uint64_t v1 = get_register64(emu, rm);
         uint64_t v2 = get_register64(emu, reg);
-        int is_carry = 0; // TODO: Please fix here.
+        uint64_t result = v1 - v2;
+        int is_carry = ((v1 >> 63) == 0) && ((result >> 63) == 1);
         update_rflags_sub(emu, v1, v2, v1 - v2, is_carry);
     } else if (po == 0x81) {
         // SUB: immediate -> register
@@ -372,7 +373,10 @@ static void rex_prefix(Emulator* emu) {
         int64_t imm8 = (int64_t) get_sign_code8(emu, 0);
         emu->rip += 1;
         int64_t val = (int64_t) get_register64(emu, rm);
-        update_rflags_sub(emu, val, imm8, val-imm8, 0); // TODO: set is_carry
+        uint64_t result = val - imm8;
+
+        int is_carry = ((val >> 63) == 0) && ((imm8 >> 63) == 1);
+        update_rflags_sub(emu, val, imm8, result, is_carry);
     } else if (po == 0x89 && modrm.mod == 3) {
         // 48 89 C8 => sub rax, rdi
         uint64_t value = get_register64(emu, reg);
