@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 #include "virtual_memory.h"
 
 #define PAGE_SIZE 4096
@@ -56,6 +57,26 @@ void vm_fread(VirtualMemory* vm, uint64_t vmaddr, FILE* src, size_t size) {
         }
         uint16_t page_offset = pos_start % PAGE_SIZE;
         fread(page->buffer + page_offset, 1, n_bytes, src);
+        size -= n_bytes;
+    }
+}
+
+void vm_memcpy(VirtualMemory* vm, uint64_t vmaddr, void* src, size_t size) {
+    uint64_t pos_start = vmaddr;
+    uint64_t pos_end = vmaddr + size;
+
+    size_t n_bytes;
+    while (size > 0) {
+        Page* page = get_page(vm, pos_start);
+        uint64_t pos_page_end = (pos_start / PAGE_SIZE +1) * PAGE_SIZE;
+
+        if (pos_end >= pos_page_end) {
+            n_bytes = pos_page_end - pos_start;
+        } else {
+            n_bytes = pos_end - pos_start;
+        }
+        uint16_t page_offset = pos_start % PAGE_SIZE;
+        memcpy(page->buffer + page_offset, src, n_bytes);
         size -= n_bytes;
     }
 }

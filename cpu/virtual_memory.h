@@ -9,6 +9,7 @@ typedef struct VirtualMemory_t VirtualMemory;
 
 VirtualMemory* vm_init();
 void vm_fread(VirtualMemory* vm, uint64_t vmaddr, FILE* stream, size_t size);
+void vm_memcpy(VirtualMemory* vm, uint64_t vmaddr, void* src, size_t size);
 
 uint64_t vm_get_memory8(VirtualMemory* vm, uint64_t vmaddr);
 uint64_t vm_get_memory32(VirtualMemory* vm, uint64_t vmaddr);

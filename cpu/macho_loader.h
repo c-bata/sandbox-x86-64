@@ -1,5 +1,5 @@
-#ifndef MACHO_H_
-#define MACHO_H_
+#ifndef MACHO_LOADER_H_
+#define MACHO_LOADER_H_
 
 #include <stdint.h>
 #include "emulator.h"
