@@ -19,28 +19,29 @@ Emulator* load_macho64(char* filepath) {
 
 #include <mach-o/loader.h>
 #include <mach-o/fat.h>
+#include <assert.h>
 
 typedef struct {
-    uint64_t vm_addr;
-    uint64_t machine_code_offset;
-    size_t machine_code_size;
+    uint64_t seg_text_vmaddr;
+    uint64_t seg_text_vmsize;
+
+    uint64_t sect_text_vmaddr;
+    uint64_t sect_text_offset;
+    size_t sect_text_size;
+
+    uint64_t lc_main_entryoff;	// file (__TEXT) offset of main()
+    uint64_t lc_main_stacksize; // if not zero, initial stack size
 } MachO;
 
-static void *load_bytes(FILE *obj_file, off_t offset, size_t size) {
-    void *buf = malloc(size);
-    fseek(obj_file, offset, SEEK_SET);
-    fread(buf, size, 1, obj_file);
-    return buf;
-}
-
-void load_macho(void *head, MachO *macho) {
+void parse_macho64(void *head, MachO *macho) {
     int i, j;
     struct mach_header_64 *header = (struct mach_header_64 *) head;
+    int is_executable = header->filetype == MH_EXECUTE;
     int is_64 = header->magic == MH_MAGIC_64 || header->magic == MH_CIGAM_64;
     int fat = header->magic == FAT_MAGIC || header->magic == FAT_CIGAM;
-    if (!is_64 || fat || header->cputype != CPU_TYPE_X86_64) {
-        fprintf(stderr, "unsupported file: is_64=%d, fat=%d, cputype=%d",
-                is_64, fat, header->cputype);
+    if (!is_executable || !is_64 || fat || header->cputype != CPU_TYPE_X86_64) {
+        fprintf(stderr, "unsupported file: is_executable=%d, is_64=%d, fat=%d, cputype=%d",
+                is_executable, is_64, fat, header->cputype);
         exit(1);
     }
 
@@ -49,16 +50,22 @@ void load_macho(void *head, MachO *macho) {
         struct load_command *cmd = (struct load_command *) ptr;
         if (cmd->cmd == LC_SEGMENT_64) {
             struct segment_command_64 *seg = (struct segment_command_64 *) ptr;
-            if (strcmp(seg->segname, "__TEXT") == 0) {
+            if (strcmp(seg->segname, SEG_TEXT) == 0) {
+                macho->seg_text_vmaddr = seg->vmaddr;
+                macho->seg_text_vmsize = seg->vmsize;
                 for (j=0; j<seg->nsects; j++) {
                     struct section_64 *sec = (struct section_64 *) (ptr + sizeof(struct segment_command_64));
-                    if (strcmp(sec->sectname, "__text") == 0) {
-                        macho->vm_addr = sec->addr;
-                        macho->machine_code_offset = sec->offset;
-                        macho->machine_code_size = sec->size;
+                    if (strcmp(sec->sectname, SECT_TEXT) == 0) {
+                        macho->sect_text_vmaddr = sec->addr;
+                        macho->sect_text_offset = sec->offset;
+                        macho->sect_text_size = sec->size;
                     }
                 }
             }
+        } else if (cmd->cmd == LC_MAIN) {
+            struct entry_point_command *entrypoint = (struct entry_point_command *) ptr;
+            macho->lc_main_entryoff = entrypoint->entryoff;
+            macho->lc_main_stacksize = entrypoint->stacksize;
         }
         ptr += cmd->cmdsize;
     }
@@ -78,10 +85,13 @@ Emulator* load_macho64(char* filepath) {
 
     MachO* macho = malloc(sizeof(MachO));
     head = mmap(NULL, sb.st_size, PROT_READ, MAP_SHARED, fd, 0);
-    load_macho(head, macho);
+    parse_macho64(head, macho);
 
-    Emulator* emu = create_emu(macho->vm_addr, macho->vm_addr);
-    vm_memcpy(emu->memory, macho->vm_addr, head+macho->machine_code_offset, macho->machine_code_size);
+    uint64_t rip = macho->seg_text_vmaddr + macho->lc_main_entryoff;
+    assert(macho->sect_text_vmaddr == rip);
+
+    Emulator* emu = create_emu(rip, macho->seg_text_vmaddr);
+    vm_memcpy(emu->memory, macho->sect_text_vmaddr, head + macho->sect_text_offset, macho->sect_text_size);
 
     munmap(head, sb.st_size);
     free(macho);
