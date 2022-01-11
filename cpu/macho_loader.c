@@ -29,6 +29,11 @@ typedef struct {
     uint64_t sect_text_offset;
     size_t sect_text_size;
 
+    // Always 4GB. the file specifies that the first 4GB of the process' address space
+    // will be mapped as non-executable, non-writable, non-readable.
+    uint64_t pagezero_vmaddr;
+    uint64_t pagezero_vmsize;
+
     uint64_t lc_main_entryoff;	// file (__TEXT) offset of main()
     uint64_t lc_main_stacksize; // if not zero, initial stack size
 } MachO;
@@ -61,6 +66,9 @@ void parse_macho64(void *head, MachO *macho) {
                         macho->sect_text_size = sec->size;
                     }
                 }
+            } else if (strcmp(seg->segname, SEG_PAGEZERO) == 0) {
+                macho->pagezero_vmaddr = seg->vmaddr;
+                macho->pagezero_vmsize = seg->vmsize;
             }
         } else if (cmd->cmd == LC_MAIN) {
             struct entry_point_command *entrypoint = (struct entry_point_command *) ptr;
@@ -85,12 +93,15 @@ Emulator* load_macho64(char* filepath) {
 
     MachO* macho = malloc(sizeof(MachO));
     head = mmap(NULL, sb.st_size, PROT_READ, MAP_SHARED, fd, 0);
+
+    // TODO: Pass Emulator* object instead of MachO*.
     parse_macho64(head, macho);
 
     uint64_t rip = macho->seg_text_vmaddr + macho->lc_main_entryoff;
     assert(macho->sect_text_vmaddr == rip);
+    uint64_t rsp = macho->pagezero_vmaddr + macho->pagezero_vmsize;
 
-    Emulator* emu = create_emu(rip, macho->seg_text_vmaddr);
+    Emulator* emu = create_emu(rip, rsp);
     vm_memcpy(emu->memory, macho->sect_text_vmaddr, head + macho->sect_text_offset, macho->sect_text_size);
 
     munmap(head, sb.st_size);
