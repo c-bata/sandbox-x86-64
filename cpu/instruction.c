@@ -74,6 +74,26 @@ static void add_rm32_r32(Emulator* emu) {
     set_rm32(emu, &modrm, rm32 + r32);
 }
 
+static void add_r32_rm32(Emulator* emu) {
+    // 03 45 f8 => addl -0x8(%rbp), %eax
+    emu->rip += 1;
+    ModRM modrm;
+    parse_modrm(emu, &modrm);
+    uint32_t r32 = get_r32(emu, &modrm);
+    uint32_t rm32 = get_rm32(emu, &modrm);
+    set_r32(emu, &modrm, rm32 + r32);
+}
+
+static void sub_r32_rm32(Emulator* emu) {
+    // 2b 45 f8 => subl -0x8(%rbp), %eax
+    emu->rip += 1;
+    ModRM modrm;
+    parse_modrm(emu, &modrm);
+    uint32_t r32 = get_r32(emu, &modrm);
+    uint32_t rm32 = get_rm32(emu, &modrm);
+    set_r32(emu, &modrm, r32 - rm32);
+}
+
 // static void cmp_r32_rm32(Emulator* emu) {
 //     emu->rip += 1;
 //     ModRM modrm;
@@ -288,6 +308,16 @@ static void rex_prefix(Emulator* emu) {
             uint64_t value = get_code32(emu, 1);
             emu->registers[reg] = value;
             emu->rip += 5;  // opcode 1 byte, operand 4 bytes
+        } else if (opcode32 == 0x89) {
+            // mov_rm32_r32
+            // 44 89 45 ec => movl %r8d, -0x14(%rbp)
+            emu->rip += 1;
+            ModRM modrm;
+            parse_modrm(emu, &modrm);
+
+            uint8_t reg = (r << 3) | modrm.reg_index + R8;
+            uint32_t r32 = get_register64(emu, reg);
+            set_rm32(emu, &modrm, r32);  // TODO(c-bata): We may be need to implement set_rm64 here.
         } else {
             printf("not implemented: rex_prefix=%02x / w=0\n", 0x40 + wrxb);
             exit(1);
@@ -569,7 +599,9 @@ void init_instructions(void) {
     memset(instructions, 0, sizeof(instructions));
 
     instructions[0x01] = add_rm32_r32;
+    instructions[0x03] = add_r32_rm32;
     instructions[0x0F] = code_0f;
+    instructions[0x2B] = sub_r32_rm32;
     // instructions[0x3B] = cmp_r32_rm32;
     // instructions[0x3C] = cmp_al_imm8;
 

@@ -7,12 +7,24 @@ asm_file="tmp.s"
 exe_file="tmp.exe"
 log_file="emulator.log"
 
+cat <<EOF | gcc -xc -c -o tmp2.o -
+int ret3() { return 3; }
+int ret5() { return 5; }
+
+int add(int x, int y) { return x+y; }
+int sub(int x, int y) { return x-y; }
+
+int add6(int a, int b, int c, int d, int e, int f) {
+  return a+b+c+d+e+f;
+}
+EOF
+
 assert() {
   local expected="$1"
   local input="$2"
 
   $compiler "$input" > $asm_file || exit
-  gcc -o $exe_file $asm_file || exit
+  gcc -o $exe_file $asm_file tmp2.o || exit
   $cpu -f macho64 $exe_file 2> $log_file
   local actual=$?
 
@@ -20,7 +32,7 @@ assert() {
     echo "[passed] $input => $expected"
   else
     echo "[failed] $input expected $expected != actual $actual"
-    ndisasm -b 64 $exe_file
+    otool -v -t $exe_file
   fi
 }
 
@@ -80,6 +92,14 @@ assert 10 '{ i=0; while(i<10) { i=i+1; } return i; }'
 assert 55 '{ i=0; j=0; for (i=0; i<=10; i=i+1) j=i+j; return j; }'
 assert 55 '{ i=0; j=0; for (; i<=10; i=i+1) j=i+j; return j; }'
 assert 3 '{ for (;;) {return 3;} return 5; }'
+
+assert 3 '{ return ret3(); }'
+assert 5 '{ return ret5(); }'
+assert 8 '{ return add(3, 5); }'
+assert 2 '{ return sub(5, 3); }'
+assert 21 '{ return add6(1,2,3,4,5,6); }'
+assert 66 '{ return add6(1,2,add6(3,4,5,6,7,8),9,10,11); }'
+assert 136 '{ return add6(1,2,add6(3,add6(4,5,6,7,8,9),10,11,12,13),14,15,16); }'
 
 assert 3 '{ x=3; return *&x; }'
 assert 3 '{ x=3; y=&x; z=&y; return **z; }'
