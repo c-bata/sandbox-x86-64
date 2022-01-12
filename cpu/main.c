@@ -6,6 +6,7 @@
 #include <stdbool.h>
 
 #include "emulator_function.h"
+#include "elf_loader.h"
 #include "macho_loader.h"
 #include "instruction.h"
 
@@ -14,7 +15,7 @@ bool quiet = false;
 enum formats {
     BIN,      // Flat raw binary [default]
     MACHO64,  // Mach-O x86-64 (Mach, including macOS variants)
-    // ELF64, // ELF64(x86-64) (Linux, most Unix variants)
+    ELF64,    // ELF64(x86-64) (Linux, most Unix variants)
 };
 int format = BIN;
 
@@ -75,6 +76,8 @@ int main(int argc, char* argv[]) {
 
             if (strcmp(argv[i], "bin") == 0)
                 format = BIN;
+            else if (strcmp(argv[i], "elf64") == 0)
+                format = ELF64;
             else if (strcmp(argv[i], "macho64") == 0)
                 format = MACHO64;
             else
@@ -87,6 +90,8 @@ int main(int argc, char* argv[]) {
 
     if (format == MACHO64) {
         emu = load_macho64(argv[1]);
+    } else if (format == ELF64) {
+        emu = load_elf64(argv[1]);
     } else if (format == BIN) {
         emu = create_emu(0x7c00, 0x7c00);
 
