@@ -6,7 +6,7 @@
 #define MAX_PAGES 1024
 
 typedef struct {
-    uint8_t offset;
+    uint64_t offset;
     uint8_t* buffer;
 } Page;
 
@@ -27,7 +27,7 @@ VirtualMemory* vm_init() {
 }
 
 Page* get_page(VirtualMemory* vm, uint32_t vmaddr) {
-    uint16_t offset = vmaddr / PAGE_SIZE;
+    uint64_t offset = vmaddr / PAGE_SIZE;
     // Find page
     for (int i=0; i<vm->num_pages; i++) {
         if (offset == vm->pages[i]->offset) {

@@ -1,12 +1,15 @@
 #!/bin/bash
 
 emulator="./cpu"
-log="test/emulator-log.txt"
+log="test/test.log"
+output="test/test.exe"
 
-assert_exit_status() {
+check_asm_test() {
   local bin_file="$1"
   local expected="$2"
-  local actual="$3"
+
+  $emulator $bin_file 2> $log
+  local actual="$?"
 
   if [ $actual == $expected ]; then
     echo "[passed] $bin_file"
@@ -16,9 +19,23 @@ assert_exit_status() {
   fi
 }
 
+run_c_test() {
+  local c_file="$1"
+  gcc -g $c_file virtual_memory.o -o $output
+  $output 2> $log
+  local status="$?"
+
+  if [ $status == 0 ]; then
+    echo "[passed] $c_file"
+  else
+    echo "[failed] $c_file exited with $status"
+  fi
+}
+
 # hello.asm
-bin_file="test/hello.bin"
-$emulator $bin_file 2> $log
-assert_exit_status $bin_file 20 $?
+check_asm_test "test/hello.bin" 20
+
+# test_virtual_memory.c
+run_c_test test/test_virtual_memory.c
 
 echo Done

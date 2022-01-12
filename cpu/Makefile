@@ -1,4 +1,5 @@
 SRCS = $(wildcard *.c)
+OBJS = $(SRCS:.c=.o)
 HEADS = $(wildcard *.h)
 ASMS = $(wildcard test/*.asm)
 BINS = $(ASMS:.asm=.bin)
@@ -9,13 +10,13 @@ CFLAGS = -std=c11 -Wall -g
 
 all: cpu $(BINS)
 
-cpu: $(SRCS) $(HEADS)
+cpu: $(OBJS) $(HEADS)
 	$(CC) $(CFLAGS) -o $@ $(SRCS)
 
 %.bin: %.asm
 	$(ASM) -f bin -o $@ $<
 
-test: all
+test: all $(OBJS)
 	./run-tests.sh
 
 clean:
