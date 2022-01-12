@@ -139,32 +139,68 @@ static void add_rm32_r32(Emulator* emu) {
 
 static void code_0f(Emulator* emu) {
     uint8_t po = get_code8(emu, 1);
-    uint8_t oprand = get_code8(emu, 2);
-    emu->rip += 3;
+    if (po == 0x94 || po == 0x95 || po == 0x9C || po == 0x9E) {
+        uint8_t oprand = get_code8(emu, 2);
+        emu->rip += 3;
 
-    // TODO: What 'oprand & 0xF0' means?
-    uint8_t reg = oprand & 0x0F;
+        // TODO: Check What 'oprand & 0xF0' means?
+        uint8_t reg = oprand & 0x0F;
 
-    switch (po) {
-        case 0x94:
-            // 0F 94 C0 => sete al
-            set_register8(emu, reg, is_zero(emu));
-            break;
-        case 0x95:
-            // 0F 95 C0 => setne al
-            set_register8(emu, reg, !is_zero(emu));
-            break;
-        case 0x9C:
-            // 0F 9C C0 => setl al
-            set_register8(emu, reg, is_sign(emu));
-            break;
-        case 0x9E:
-            // 0F 9E C0 => setle al
-            set_register8(emu, reg, is_sign(emu) || is_zero(emu));
-            break;
-        default:
-            printf("not implemented: 0F /%d\n", po);
-            exit(1);
+        switch (po) {
+            case 0x94:
+                // 0F 94 C0 => sete al
+                set_register8(emu, reg, is_zero(emu));
+                return;
+            case 0x95:
+                // 0F 95 C0 => setne al
+                set_register8(emu, reg, !is_zero(emu));
+                return;
+            case 0x9C:
+                // 0F 9C C0 => setl al
+                set_register8(emu, reg, is_sign(emu));
+                return;
+            case 0x9E:
+                // 0F 9E C0 => setle al
+                set_register8(emu, reg, is_sign(emu) || is_zero(emu));
+                return;
+        }
+    } else if (po >= 0x80 && po <= 0x8E) {
+        int diff;
+        switch (po) {
+            case 0x80:
+                diff = is_overflow(emu) ? get_sign_code32(emu, 2) : 0;
+                break;
+            case 0x81:
+                diff = !is_overflow(emu) ? get_sign_code32(emu, 2) : 0;
+                break;
+            case 0x82:
+                diff = is_carry(emu) ? get_sign_code32(emu, 2) : 0;
+                break;
+            case 0x83:
+                diff = !is_carry(emu) ? get_sign_code32(emu, 2) : 0;
+                break;
+            case 0x84:
+                // 0f 84 0c 00 00 00 => je 0x0c
+                diff = is_zero(emu) ? get_sign_code32(emu, 2) : 0;
+                break;
+            case 0x85:
+                diff = !is_zero(emu) ? get_sign_code32(emu, 2) : 0;
+                break;
+            case 0x88:
+                diff = is_sign(emu) ? get_sign_code32(emu, 2) : 0;
+                break;
+            case 0x89:
+                diff = !is_sign(emu) ? get_sign_code32(emu, 2) : 0;
+                break;
+            default:
+                printf("not implemented: 0F /%d\n", po);
+                exit(1);
+        }
+        emu->rip += (diff + 6);
+        return;
+    } else {
+        printf("not implemented: 0F /%d\n", po);
+        exit(1);
     }
 }
 

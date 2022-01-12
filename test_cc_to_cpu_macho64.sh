@@ -3,7 +3,7 @@
 cpu=./cpu/cpu
 compiler=./cc/9cc
 
-asm_file="tmp.asm"
+asm_file="tmp.s"
 exe_file="tmp.exe"
 log_file="emulator.log"
 
@@ -66,27 +66,27 @@ assert 8 'a=3; z=5; return a+z;'
 assert 5 'a=3; return 5; return a;'
 assert 6 'a=b=3; return a+b;'
 
-#assert 3 '{ if (0) return 2; return 3; }'
-#assert 3 '{ if (1-1) return 2; return 3; }'
-#assert 2 '{ if (1) return 2; return 3; }'
-#assert 2 '{ if (2-1) return 2; return 3; }'
-#assert 4 '{ if (0) { 1; 2; return 3; } else { return 4; } }'
-#assert 3 '{ if (1) { 1; 2; return 3; } else { return 4; } }'
-#
-#assert 0 'a = 5; while (a) { a = a-1; } return a;'
-#assert 1 'a = 5; while (a) { a = a-1; } return a+1;'
-#assert 10 '{ i=0; while(i<10) { i=i+1; } return i; }'
-#
-#assert 55 '{ i=0; j=0; for (i=0; i<=10; i=i+1) j=i+j; return j; }'
-#assert 55 '{ i=0; j=0; for (; i<=10; i=i+1) j=i+j; return j; }'
-#assert 3 '{ for (;;) {return 3;} return 5; }'
-#
-#assert 3 '{ x=3; return *&x; }'
-#assert 3 '{ x=3; y=&x; z=&y; return **z; }'
-#assert 5 '{ x=3; y=5; return *(&x+8); }'
-#assert 3 '{ x=3; y=5; return *(&y-8); }'
-#assert 5 '{ x=3; y=&x; *y=5; return x; }'
-#assert 7 '{ x=3; y=5; *(&x+8)=7; return y; }'
-#assert 7 '{ x=3; y=5; *(&y-8)=7; return x; }'
+assert 3 '{ if (0) return 2; return 3; }'
+assert 3 '{ if (1-1) return 2; return 3; }'
+assert 2 '{ if (1) return 2; return 3; }'
+assert 2 '{ if (2-1) return 2; return 3; }'
+assert 4 '{ if (0) { 1; 2; return 3; } else { return 4; } }'
+assert 3 '{ if (1) { 1; 2; return 3; } else { return 4; } }'
+
+assert 0 'a = 5; while (a) { a = a-1; } return a;'
+assert 1 'a = 5; while (a) { a = a-1; } return a+1;'
+assert 10 '{ i=0; while(i<10) { i=i+1; } return i; }'
+
+assert 55 '{ i=0; j=0; for (i=0; i<=10; i=i+1) j=i+j; return j; }'
+assert 55 '{ i=0; j=0; for (; i<=10; i=i+1) j=i+j; return j; }'
+assert 3 '{ for (;;) {return 3;} return 5; }'
+
+assert 3 '{ x=3; return *&x; }'
+assert 3 '{ x=3; y=&x; z=&y; return **z; }'
+assert 5 '{ x=3; y=5; return *(&x+8); }'
+assert 3 '{ x=3; y=5; return *(&y-8); }'
+assert 5 '{ x=3; y=&x; *y=5; return x; }'
+assert 7 '{ x=3; y=5; *(&x+8)=7; return y; }'
+assert 7 '{ x=3; y=5; *(&y-8)=7; return x; }'
 
 echo Done
