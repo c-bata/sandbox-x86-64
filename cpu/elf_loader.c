@@ -19,6 +19,37 @@
    (ehdr).e_ident[EI_MAG3] == ELFMAG3 && \
    (ehdr).e_ident[EI_CLASS] == ELFCLASS64)
 
+// CPU emulator currently cannot run _start routine (C Startup Script).
+// So here we set RIP to the address of main routine instead of `ehdr->e_entry`.
+uint64_t find_main_sym_addr(void *head) {
+    int i, j;
+    Elf64_Ehdr *ehdr = head;
+    Elf64_Shdr *shstr = head + ehdr->e_shoff + ehdr->e_shentsize * ehdr->e_shstrndx;
+    Elf64_Shdr *str;
+    for (i = 0; i < ehdr->e_shnum; i++) {
+        // Find .strtab section
+        str = head + ehdr->e_shoff + ehdr->e_shentsize * i;
+        char* segname = head + shstr->sh_offset + str->sh_name;
+        if (!strcmp(segname, ".strtab"))
+            break;
+    }
+    for (i = 0; i < ehdr->e_shnum; i++) {
+        // Find main symbol
+        Elf64_Shdr* sym = (head + ehdr->e_shoff + ehdr->e_shentsize * i);
+        if (sym->sh_type != SHT_SYMTAB)
+            continue;
+        for (j=0; j<sym->sh_size / sym->sh_entsize; j++) {
+            Elf64_Sym* symp = head + sym->sh_offset + sym->sh_entsize * j;
+            char* symname = head + str->sh_offset + symp->st_name;
+            if (strcmp(symname, "main") != 0)
+                continue;
+            return symp->st_value;
+        }
+    }
+    fprintf(stderr, "ELF 64 Loader: main symbol is not found.");
+    exit(EXIT_FAILURE);
+}
+
 void parse_elf64(void *head, Emulator* emu) {
     int i;
     Elf64_Ehdr *ehdr;
@@ -32,15 +63,7 @@ void parse_elf64(void *head, Emulator* emu) {
         exit(1);
     }
 
-    // TODO: Get vmaddr of main from symbol table.
-    // readelf -s ./tmp.exe
-    //    53: 0000000000004018     0 NOTYPE  GLOBAL DEFAULT   23 _end
-    //    54: 0000000000001040    47 FUNC    GLOBAL DEFAULT   13 _start
-    //    55: 0000000000004010     0 NOTYPE  GLOBAL DEFAULT   23 __bss_start
-    //    56: 0000000000001129     0 NOTYPE  GLOBAL DEFAULT   13 main
-    // emu->rip = ehdr->e_entry;
-    emu->rip = 0x1129;  // main
-
+    // It is not required to clear .bss fields by zero because memories are initialized with 0.
     Elf64_Phdr *phdr;
     for (i = 0; i < ehdr->e_phnum; i++) {
         phdr = (Elf64_Phdr *) (head + ehdr->e_phoff + ehdr->e_phentsize * i);
@@ -49,7 +72,8 @@ void parse_elf64(void *head, Emulator* emu) {
                       head+phdr->p_offset, phdr->p_filesz);
         }
     }
-    // It is not required to clear .bss fields by zero because memories are initialized with 0.
+
+    emu->rip = find_main_sym_addr(head);
 }
 
 Emulator* load_elf64(char* filepath) {
