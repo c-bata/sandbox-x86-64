@@ -94,6 +94,17 @@ static void sub_r32_rm32(Emulator* emu) {
     set_r32(emu, &modrm, r32 - rm32);
 }
 
+static void xor_rm32_r32(Emulator* emu) {
+    // 31 db => xor ebx,ebx
+    emu->rip += 1;
+    ModRM modrm;
+    parse_modrm(emu, &modrm);
+    uint32_t r32 = get_r32(emu, &modrm);
+    uint32_t rm32 = get_rm32(emu, &modrm);
+    set_rm32(emu, &modrm, r32 ^ rm32);  // set_r32?
+    fprintf(stderr, "CPU Warning: xor_rm32_r32 may be wrong behavior.");
+}
+
 // static void cmp_r32_rm32(Emulator* emu) {
 //     emu->rip += 1;
 //     ModRM modrm;
@@ -224,20 +235,38 @@ static void code_0f(Emulator* emu) {
     }
 }
 
-static void inc_rm32(Emulator* emu, ModRM* modrm) {
-    uint32_t value = get_rm32(emu, modrm);
-    set_rm32(emu, modrm, value + 1);
-}
-
 static void code_ff(Emulator* emu) {
     emu->rip += 1;
     ModRM modrm;
     parse_modrm(emu, &modrm);
 
+    // See Table A.6, Volume 2D A-18.
     switch (modrm.opecode) {
-        case 0:
-            inc_rm32(emu, &modrm);
+        case 0: {
+            // INC rm32
+            uint32_t value = get_rm32(emu, &modrm);
+            set_rm32(emu, &modrm, value + 1);
             break;
+        }
+        case 1: {
+            // DEC rm32
+            uint32_t value = get_rm32(emu, &modrm);
+            set_rm32(emu, &modrm, value - 1);
+            break;
+        }
+        case 2: {
+            // near CALL Ev
+            // ex) ff 15 72 2f 00 00 => call QWORD PTR [rip+0x2f72]
+            //     rm = 5 (= RSP) but unused.
+            //     disp32 = 0x2f72;
+            push32(emu, emu->rip);
+            emu->rip += ((int32_t) modrm.disp32);
+            break;
+        }
+        case 3: // far CALL Ep
+        case 4: // near JMP Ev
+        case 5: // far JMP Mp
+        case 6: // PUSH Ev
         default:
             printf("not implemented: FF /%d\n", modrm.opecode);
             exit(1);
@@ -435,6 +464,14 @@ static void rex_prefix(Emulator* emu) {
 
         int is_carry = carry_flag_sub(v1, v2);
         update_rflags_sub(emu, v1, v2, v1 - v2, is_carry);
+    // } else if (po == 0x83 && modrm.mod == 0 && modrm.opecode == 7) {
+    //     // ex) 48 83 3d 02 2f 00 00 => cmp QWORD PTR [rip+0x2f02],0x0
+    } else if (po == 0x83 && modrm.mod == 3 && modrm.opecode == 4) {
+        // 48 83 e4 f0 => and rsp,0xf0
+        uint8_t imm8 = get_code8(emu, 0);
+        emu->rip += 1;
+        uint64_t value = get_register64(emu, rm) & imm8;
+        set_register64(emu, rm, value);
     } else if (po == 0x83 && modrm.mod == 3 && modrm.opecode == 5) {
         // 1000 00sw : 11 101 reg : immediate data
         // ex) 48 83 EC 00 => sub rsp,byte +0x0
@@ -551,6 +588,12 @@ static void call_rel32(Emulator* emu) {
     emu->rip += (diff + 5);  // jump
 }
 
+static void endbr64(Emulator* emu) {
+    // TODO(c-bata): Implement here. Currently just skips 4 bytes.
+    fprintf(stderr, "CPU Warning: endbr64 is skipped.");
+    emu->rip += 4;
+}
+
 static void neg(Emulator* emu) {
     emu->rip += 1; // opcode
     ModRM modrm;
@@ -602,6 +645,7 @@ void init_instructions(void) {
     instructions[0x03] = add_r32_rm32;
     instructions[0x0F] = code_0f;
     instructions[0x2B] = sub_r32_rm32;
+    instructions[0x31] = xor_rm32_r32;
     // instructions[0x3B] = cmp_r32_rm32;
     // instructions[0x3C] = cmp_al_imm8;
 
@@ -653,6 +697,7 @@ void init_instructions(void) {
     instructions[0xEB] = short_jump;
     // instructions[0xEC] = in_al_dx;
     // instructions[0xEE] = out_dx_al;
+    instructions[0xF3] = endbr64;
     instructions[0xF7] = neg;
     instructions[0xFF] = code_ff;
 }

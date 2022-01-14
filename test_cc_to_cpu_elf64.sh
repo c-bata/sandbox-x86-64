@@ -20,7 +20,6 @@ assert() {
     echo "[passed] $input => $expected"
   else
     echo "[failed] $input expected $expected != actual $actual"
-    otool -v -t $exe_file
   fi
 }
 
