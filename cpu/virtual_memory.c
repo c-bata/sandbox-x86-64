@@ -65,8 +65,9 @@ void vm_memcpy(VirtualMemory* vm, uint64_t vmaddr, void* src, size_t size) {
     uint64_t pos_start = vmaddr;
     uint64_t pos_end = vmaddr + size;
 
-    size_t n_bytes;
-    while (size > 0) {
+    int64_t rest, n_bytes;
+    rest = (int64_t) size;
+    while (rest > 0) {
         Page* page = get_page(vm, pos_start);
         uint64_t pos_page_end = (pos_start / PAGE_SIZE +1) * PAGE_SIZE;
 
@@ -77,7 +78,7 @@ void vm_memcpy(VirtualMemory* vm, uint64_t vmaddr, void* src, size_t size) {
         }
         uint16_t page_offset = pos_start % PAGE_SIZE;
         memcpy(page->buffer + page_offset, src, n_bytes);
-        size -= n_bytes;
+        rest -= n_bytes;
     }
 }
 
