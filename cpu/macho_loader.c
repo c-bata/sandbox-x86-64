@@ -107,6 +107,8 @@ Emulator* load_macho64(char* filepath) {
     munmap(head, sb.st_size);
     free(macho);
     close(fd);
+
+    push64(emu, 0x00); // Push return address
     return emu;
 }
 #endif

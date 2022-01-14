@@ -7,12 +7,24 @@ asm_file="tmp.s"
 exe_file="tmp.exe"
 log_file="emulator.log"
 
+cat <<EOF | gcc -xc -c -o tmp2.o -
+int ret3() { return 3; }
+int ret5() { return 5; }
+
+int add(int x, int y) { return x+y; }
+int sub(int x, int y) { return x-y; }
+
+int add6(int a, int b, int c, int d, int e, int f) {
+  return a+b+c+d+e+f;
+}
+EOF
+
 assert() {
   local expected="$1"
   local input="$2"
 
   $compiler "$input" > $asm_file || exit
-  gcc -o $exe_file $asm_file || exit
+  gcc -o $exe_file $asm_file tmp2.o  || exit
   $cpu -f elf64 $exe_file 2> $log_file
   local actual=$?
 
@@ -25,9 +37,6 @@ assert() {
 
 # Note that an exit status code must be 0~255 in UNIX.
 assert 0 'return 0;'
-
-exit 1
-
 assert 42 'return 42;'
 assert 21 'return 5+20-4;'
 assert 21 'return 5 + 20 -  4 ;'

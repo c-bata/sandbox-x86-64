@@ -1,15 +1,16 @@
+#include <stdlib.h>
+#include <unistd.h>
+#include "emulator.h"
+
+#ifdef __linux
+
 #include <elf.h>
 #include <fcntl.h>
-#include <unistd.h>
 #include <string.h>
-#include <stdlib.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include "elf_loader.h"
-#include "emulator.h"
 #include "emulator_function.h"
-
-#ifdef __linux
 
 #define IS_ELF64(ehdr) \
   ((ehdr).e_ident[EI_MAG0] == ELFMAG0 && \
@@ -30,7 +31,15 @@ void parse_elf64(void *head, Emulator* emu) {
         fprintf(stderr, "This emulator only supports executable for x86-64.\n");
         exit(1);
     }
-    emu->rip = ehdr->e_entry;
+
+    // TODO: Get vmaddr of main from symbol table.
+    // readelf -s ./tmp.exe
+    //    53: 0000000000004018     0 NOTYPE  GLOBAL DEFAULT   23 _end
+    //    54: 0000000000001040    47 FUNC    GLOBAL DEFAULT   13 _start
+    //    55: 0000000000004010     0 NOTYPE  GLOBAL DEFAULT   23 __bss_start
+    //    56: 0000000000001129     0 NOTYPE  GLOBAL DEFAULT   13 main
+    // emu->rip = ehdr->e_entry;
+    emu->rip = 0x1129;  // main
 
     Elf64_Phdr *phdr;
     for (i = 0; i < ehdr->e_phnum; i++) {
@@ -61,6 +70,8 @@ Emulator* load_elf64(char* filepath) {
 
     munmap(head, sb.st_size);
     close(fd);
+
+    push64(emu, 0x00); // Push return address
     return emu;
 }
 
