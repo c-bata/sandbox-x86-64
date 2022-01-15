@@ -548,7 +548,7 @@ static void rex_prefix(Emulator* emu) {
         set_register64(emu, RDX, rem);
     } else if (po == 0xF7 && modrm.opecode == 3) {
         // Two's Complement Negation - 1111 011w : 11 011 reg
-        // 49 F7 DA => neg r10
+        // 49 F7 DA => code_f7 r10
         int64_t value = get_register64(emu, rm);
         set_register64(emu, rm, -value);
     } else {
@@ -594,12 +594,27 @@ static void endbr64(Emulator* emu) {
     emu->rip += 4;
 }
 
-static void neg(Emulator* emu) {
+static void code_f7(Emulator* emu) {
     emu->rip += 1; // opcode
     ModRM modrm;
     parse_modrm(emu, &modrm);
-    int32_t rm32 = (int32_t) get_rm32(emu, &modrm);
-    set_rm32(emu, &modrm, (uint32_t) -rm32);
+    switch (modrm.opecode) {
+        // Table A-6, Vol. 2D
+        case 3: {
+            int32_t rm32 = (int32_t) get_rm32(emu, &modrm);
+            set_rm32(emu, &modrm, (uint32_t) -rm32);
+            return;
+        }
+        case 0: // TEST
+        case 2: // NOT
+        case 4: // MUL AL/rAX
+        case 5: // IMUL AL/rAX
+        case 6: // DIV AL/rAX
+        case 7: // IDIV AL/rAX
+        default:
+            fprintf(stderr, "Not implemented 0xF7 modrm.opecode=%d\n", modrm.opecode);
+            exit(EXIT_FAILURE);
+    }
 }
 
 static void nop(Emulator* emu) {
@@ -698,6 +713,6 @@ void init_instructions(void) {
     // instructions[0xEC] = in_al_dx;
     // instructions[0xEE] = out_dx_al;
     instructions[0xF3] = endbr64;
-    instructions[0xF7] = neg;
+    instructions[0xF7] = code_f7;
     instructions[0xFF] = code_ff;
 }
