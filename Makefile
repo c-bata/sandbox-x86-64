@@ -9,7 +9,6 @@ all:
 test:
 	$(MAKE) test -C cc
 	$(MAKE) test -C cpu
-	./test_cc_to_cpu.sh
 
 .PHONY: clean
 clean:
