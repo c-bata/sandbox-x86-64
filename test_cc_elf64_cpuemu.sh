@@ -34,6 +34,9 @@ assert() {
     echo "[passed] $input => $expected"
   else
     echo "[failed] $input expected $expected != actual $actual"
+    # Copy asm and executable for debugging.
+    cp $asm_file $(basename $asm_file)
+    cp $exe_file $(basename $exe_file)
     exit 1
   fi
 }

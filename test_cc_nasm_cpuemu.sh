@@ -3,9 +3,11 @@
 cpu=./cpu/cpu
 compiler=./cc/9cc
 
-asm_file="tmp.asm"
-bin_file="tmp.bin"
-log_file="emulator.log"
+tmpdir=`mktemp -d /tmp/cc-nasm-test-XXXXXX`
+echo "Temporary Directory: $tmpdir"
+asm_file="$tmpdir/tmp.asm"
+bin_file="$tmpdir/tmp.bin"
+log_file="$tmpdir/emulator.log"
 
 assert() {
   local expected="$1"
@@ -21,6 +23,11 @@ assert() {
   else
     echo "[failed] $input expected $expected != actual $actual"
     ndisasm -b 64 $bin_file
+
+    # Copy asm and bin files for debugging.
+    cp $asm_file $(basename $asm_file)
+    cp $bin_file $(basename $bin_file)
+    exit 1
   fi
 }
 
