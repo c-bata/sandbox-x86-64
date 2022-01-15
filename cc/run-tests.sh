@@ -1,6 +1,10 @@
 #!/bin/bash
 
-cat <<EOF | gcc -xc -c -o tmp2.o -
+tmpdir=`mktemp -d /tmp/cc-elf64-test-XXXXXX`
+echo "tmp dir: $tmpdir"
+echo ""
+
+cat <<EOF | gcc -xc -c -o $tmpdir/tmp2.o -
 int ret3() { return 3; }
 int ret5() { return 5; }
 
@@ -16,13 +20,13 @@ assert() {
   expected="$1"
   input="$2"
 
-  ./9cc "$input" > tmp.s || exit
+  ./9cc "$input" > $tmpdir/tmp.s || exit
   if [ "$?" == 1 ]; then
     return
   fi
 
-  gcc -o tmp tmp.s tmp2.o
-  ./tmp
+  gcc -o $tmpdir/tmp $tmpdir/tmp.s $tmpdir/tmp2.o
+  $tmpdir/tmp
   actual="$?"
 
   if [ "$actual" = "$expected" ]; then

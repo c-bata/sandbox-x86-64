@@ -33,6 +33,7 @@ assert() {
   else
     echo "[failed] $input expected $expected != actual $actual"
     otool -v -t $exe_file
+    exit 1
   fi
 }
 

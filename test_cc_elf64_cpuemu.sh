@@ -3,11 +3,13 @@
 cpu=./cpu/cpu
 compiler=./cc/9cc
 
-asm_file="tmp.s"
-exe_file="tmp.exe"
-log_file="emulator.log"
+tmpdir=`mktemp -d /tmp/cc-elf64-test-XXXXXX`
+echo "Temporary Directory: $tmpdir"
+asm_file="$tmpdir/tmp.s"
+exe_file="$tmpdir/tmp.exe"
+log_file="$tmpdir/emulator.log"
 
-cat <<EOF | gcc -xc -c -o tmp2.o -
+cat <<EOF | gcc -xc -c -o $tmpdir/tmp2.o -
 int ret3() { return 3; }
 int ret5() { return 5; }
 
@@ -24,7 +26,7 @@ assert() {
   local input="$2"
 
   $compiler "$input" > $asm_file || exit
-  gcc -o $exe_file $asm_file tmp2.o  || exit
+  gcc -o $exe_file $asm_file $tmpdir/tmp2.o  || exit
   $cpu -f elf64 $exe_file 2> $log_file
   local actual=$?
 
@@ -32,6 +34,7 @@ assert() {
     echo "[passed] $input => $expected"
   else
     echo "[failed] $input expected $expected != actual $actual"
+    exit 1
   fi
 }
 
