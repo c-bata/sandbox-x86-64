@@ -1,7 +1,7 @@
 CC = gcc
 SRCS = $(wildcard *.c)
 OBJS = $(SRCS:.c=.o)
-CFLAGS = -std=c11 -Wall -g
+CFLAGS = -std=c11 -Wall -Wno-switch -Wno-return-type -g
 
 all: 9cc tokendump astdump
 

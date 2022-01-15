@@ -367,7 +367,7 @@ static void rex_prefix(Emulator* emu) {
             ModRM modrm;
             parse_modrm(emu, &modrm);
 
-            uint8_t reg = (r << 3) | modrm.reg_index + R8;
+            uint8_t reg = (r << 3) | (modrm.reg_index + R8);
             uint32_t r32 = get_register64(emu, reg);
             set_rm32(emu, &modrm, r32);  // TODO(c-bata): We may be need to implement set_rm64 here.
         } else {
