@@ -214,11 +214,34 @@ static Node *relational(Token **rest, Token *tok) {
     }
 }
 
+static Node *new_add(Node *lhs, Node *rhs, Token *tok) {
+    add_type(lhs);
+    add_type(rhs);
+
+    // num + num
+    if (is_integer(lhs->ty) && is_integer(rhs->ty))
+        return new_binary(ND_ADD, lhs, rhs);
+
+    if (lhs->ty->base && rhs->ty->base)
+        error_tok(tok, "invalid operands");
+
+    // Canonicalize `num + ptr` to `ptr + num`
+    if (!lhs->ty->base && rhs->ty->base) {
+        Node *tmp = lhs;
+        lhs = rhs;
+        rhs = tmp;
+    }
+
+    // ptr + num
+    rhs = new_binary(ND_MUL, rhs, new_node_num(8));
+    return new_binary(ND_ADD, lhs, rhs);
+}
+
 static Node *add(Token **rest, Token *tok) {
     Node *node = mul(&tok, tok);
     for (;;) {
         if (equal(tok, "+")) {
-            node = new_binary(ND_ADD, node, mul(&tok, tok->next));
+            node = new_add(node, mul(&tok, tok->next), tok);
             continue;
         }
         if (equal(tok, "-")) {

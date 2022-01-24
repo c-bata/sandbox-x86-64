@@ -4,6 +4,7 @@
 #define _POSIX_C_SOURCE 200809L
 #include <stdbool.h>
 
+typedef struct Type Type;
 typedef struct Token Token;
 typedef struct Node Node;
 
@@ -87,6 +88,7 @@ struct Node {
     Node *rhs;     // right-hand side
     int val;       // used only if kind==ND_NUM
     Obj *var;      // used only if kind==ND_VAR
+    Type *ty;      // Type. int or pointer
 
     // Block
     Node *body;
@@ -104,6 +106,26 @@ struct Node {
 };
 
 Function *parse(Token *tok);
+
+
+//
+// type.c
+//
+
+typedef enum {
+    TY_INT,
+    TY_PTR,
+} TypeKind;
+
+struct Type {
+    TypeKind kind;
+    Type *base;
+};
+
+extern Type *ty_int;
+
+bool is_integer(Type *ty);
+void add_type(Node *node);
 
 //
 // codegen.c

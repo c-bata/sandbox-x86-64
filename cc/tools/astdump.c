@@ -2,6 +2,18 @@
 #include "stdio.h"
 #include "../9cc.h"
 
+static void gen_type(Type *ty) {
+    if (ty->kind == TY_INT) {
+        printf("%d [label=\"Type INT\" color=green, style=filled]\n", (int) ty);
+    } else if (ty->kind == TY_PTR) {
+        printf("%d [label=\"Type PTR\" color=green, style=filled]\n", (int) ty);
+    }
+    if (ty->base != NULL) {
+        printf("%d -> %d [label=\"base\"]\n", (int) ty, (int) ty->base);
+        gen_type(ty->base);
+    }
+}
+
 static void gen_node(Node *node) {
     if (node->kind == ND_VAR) {
         assert(node->var != NULL);
@@ -48,6 +60,10 @@ static void gen_node(Node *node) {
         printf("%d [label=\"%d\" color=orange, style=filled]\n", (int) node, node->kind);
     }
 
+    if (node->ty != NULL) {
+        printf("%d -> %d [label=\"ty\"]\n", (int) node, (int) node->ty);
+        gen_type(node->ty);
+    }
     if (node->lhs != NULL) {
         printf("%d -> %d [label=\"lhs\"]\n", (int) node, (int) node->lhs);
         gen_node(node->lhs);
