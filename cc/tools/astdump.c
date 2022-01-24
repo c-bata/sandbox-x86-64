@@ -60,6 +60,10 @@ static void gen_node(Node *node) {
         printf("%d [label=\"%d\" color=orange, style=filled]\n", (int) node, node->kind);
     }
 
+    if (node->var != NULL) {
+        printf("%d -> %d [label=\"var-ty\"]\n", (int) node, (int) node->var->ty);
+        gen_type(node->var->ty);
+    }
     if (node->ty != NULL) {
         printf("%d -> %d [label=\"ty\"]\n", (int) node, (int) node->ty);
         gen_type(node->ty);

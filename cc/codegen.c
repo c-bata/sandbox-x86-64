@@ -191,7 +191,7 @@ static void gen_stmt(Node* node) {
             printf(".Lend%d:\n", unique_label);
             return;
     }
-    error("invalid statement");
+    error("invalid statement: %d", node->kind);
 }
 
 // Round up `n` to the nearest multiple of `align`. For instance,

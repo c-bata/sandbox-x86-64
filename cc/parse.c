@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 #include "9cc.h"
 
 // All local variable instances created during parsing are
@@ -57,16 +58,21 @@ static Node *new_var_node(Obj* var) {
     return node;
 }
 
-static Obj *new_lvar(char *name) {
+static Obj *new_lvar(char *name, Type *ty) {
     Obj *var = calloc(1, sizeof(Obj));
     var->name = name;
     var->next = locals;
+    var->ty = ty;
     locals = var;
     return var;
 }
 
 // EBNF
-// | program    = stmt*
+// | program    = compound-stmt
+// | compound-stmt = (declaration | stmt)* "}"
+// | declaration = declspec (declarator ("=" expr)? ("," declarator ("=" expr)?)*)? ";"
+// | declspec = "int"
+// | declarator = "*"* ident
 // | stmt       = expr ";" | "{" stmt* "}" | "return" expr ";"
 // |              | "if" "(" expr ")" stmt ("else" stmt)?
 // |              | "while" "(" expr ")" stmt
@@ -82,6 +88,10 @@ static Obj *new_lvar(char *name) {
 // ↓
 // High Priority
 
+static Node *compound_stmt(Token **rest, Token *tok);
+static Node *declaration(Token **rest, Token *tok);
+static Type *declspec(Token **rest, Token *tok);
+static Type *declarator(Token **rest, Token *tok, Type *ty);
 static Node *stmt(Token **rest, Token *tok);
 static Node *expr(Token **rest, Token *tok);
 static Node *assign(Token **rest, Token *tok);
@@ -91,6 +101,76 @@ static Node *add(Token **rest, Token *tok);
 static Node *mul(Token **rest, Token *tok);
 static Node *unary(Token **rest, Token *tok);
 static Node *primary(Token **rest, Token *tok);
+
+static char *get_ident(Token *tok) {
+    if (tok->kind != TK_IDENT)
+        error_tok(tok, "expected an identifier");
+    return my_strndup(tok->loc, tok->len);
+}
+
+static Node *compound_stmt(Token **rest, Token *tok) {
+    Node *node = new_node(ND_BLOCK);
+
+    Node head = {};
+    Node *cur = &head;
+    while (!equal(tok, "}")) {
+        if (equal(tok, "int"))
+            cur = cur->next = declaration(&tok, tok);
+        else
+            cur = cur->next = stmt(&tok, tok);
+    }
+
+    node->body = head.next;
+    *rest = tok->next;
+    return node;
+}
+
+static Node *declaration(Token **rest, Token *tok) {
+    Type *basety = declspec(&tok, tok);
+
+    Node head = {};
+    Node *cur = &head;
+    int i = 0;
+
+    while(!equal(tok, ";")) {
+        if (i++ > 0)
+            tok = skip(tok, ",");
+
+        Type *ty = declarator(&tok, tok, basety);
+        Obj *var = new_lvar(get_ident(ty->name), ty);
+
+        if (!equal(tok, "="))
+            continue;
+
+        Node *node = new_var_node(var);
+        node = new_binary(ND_ASSIGN, node, assign(&tok, tok->next));
+        cur = cur->next = new_unary(ND_EXPR_STMT, node);
+    }
+
+    Node *node = new_node(ND_BLOCK);
+    node->body = head.next;
+    *rest = tok->next;
+    return node;
+}
+
+static Type *declspec(Token **rest, Token *tok) {
+    *rest = skip(tok, "int");
+    return ty_int;
+}
+
+static Type *declarator(Token **rest, Token *tok, Type *ty) {
+    while(equal(tok, "*")) {
+        ty = pointer_to(ty);
+        tok = tok->next;
+    }
+
+    if (tok->kind != TK_IDENT)
+        error_tok(tok, "expected a variable name");
+
+    ty->name = tok;
+    *rest = tok->next;
+    return ty;
+}
 
 static Node *stmt(Token **rest, Token *tok) {
     Node *node;
@@ -341,8 +421,6 @@ static Node *primary(Token **rest, Token *tok) {
 
         // Variable
         Obj *var = find_var(tok);
-        if (!var)
-            var = new_lvar(my_strndup(tok->loc, tok->len));
         Node *node = new_var_node(var);
         *rest = tok->next;
         return node;
@@ -356,15 +434,11 @@ static Node *primary(Token **rest, Token *tok) {
 }
 
 Function *parse(Token *tok) {
-    Node head = {};
-    Node *cur = &head;
-
-    // program = stmt*
-    while (tok->kind != TK_EOF)
-        cur = cur->next = stmt(&tok, tok);
+    tok = skip(tok, "{");
 
     Function *prog = calloc(1, sizeof(Function));
-    prog->body = head.next;
+    prog->body = compound_stmt(&tok, tok);
+    assert(tok->kind == TK_EOF);
     prog->locals = locals;
     return prog;
 }
