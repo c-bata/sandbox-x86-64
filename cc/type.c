@@ -53,7 +53,7 @@ void add_type(Node *node) {
             if (node->lhs->ty->kind == TY_PTR)
                 node->ty = node->lhs->ty->base;
             else
-                node->ty = ty_int;
+                node->ty = ty_int;  // must not reach here?
             return;
     }
 }

@@ -237,6 +237,32 @@ static Node *new_add(Node *lhs, Node *rhs, Token *tok) {
     return new_binary(ND_ADD, lhs, rhs);
 }
 
+static Node *new_sub(Node *lhs, Node *rhs, Token *tok) {
+    add_type(lhs);
+    add_type(rhs);
+
+    // num - num
+    if (is_integer(lhs->ty) && is_integer(rhs->ty))
+        return new_binary(ND_SUB, lhs, rhs);
+
+    // ptr - num
+    if (lhs->ty->base && is_integer(rhs->ty)) {
+        rhs = new_binary(ND_MUL, rhs, new_node_num(8));
+        add_type(rhs);
+        Node *node = new_binary(ND_SUB, lhs, rhs);
+        node->ty = lhs->ty;
+        return node;
+    }
+
+    // ptr-ptr, which returns how many elements are between the two.
+    if (lhs->ty->base && rhs->ty->base) {
+        Node *node = new_binary(ND_SUB, lhs, rhs);
+        node->ty = ty_int;
+        return new_binary(ND_DIV, node, new_node_num(8));
+    }
+    error_tok(tok, "invalid operations");
+}
+
 static Node *add(Token **rest, Token *tok) {
     Node *node = mul(&tok, tok);
     for (;;) {
@@ -245,7 +271,7 @@ static Node *add(Token **rest, Token *tok) {
             continue;
         }
         if (equal(tok, "-")) {
-            node = new_binary(ND_SUB, node, mul(&tok, tok->next));
+            node = new_sub(node, mul(&tok, tok->next), tok);
             continue;
         }
         *rest = tok;
