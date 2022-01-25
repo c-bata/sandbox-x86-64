@@ -124,6 +124,8 @@ assert 5 'int main() { int x=3; int y=5; return *(&x-(-1)); }'
 assert 7 'int main() { int x=3; int y=5; *(&y-2+1)=7; return x; }'
 assert 5 'int main() { int x=3; return (&x+2)-&x+3; }'
 
+assert 32 'int main() { return ret32(); } int ret32() { return 32; }'
+
 # failure case
 echo ""
 echo "Failure case:"

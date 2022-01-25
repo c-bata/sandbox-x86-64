@@ -1,9 +1,11 @@
 #include <assert.h>
+#include <string.h>
 #include "stdio.h"
 #include "9cc.h"
 
 static int depth;
 static char *argreg[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+static Function *current_fn;
 static bool emu_mode = false;
 
 static void gen_expr(Node* node);
@@ -145,7 +147,7 @@ static void gen_stmt(Node* node) {
             return;
         case ND_RETURN:
             gen_expr(node->lhs);
-            printf("  jmp .L.return\n");
+            printf("  jmp .L.return.%s\n", current_fn->name);
             return;
         case ND_IF:
             gen_expr(node->cond);  // cond -> rax
@@ -201,50 +203,43 @@ static int align_to(int n, int align) {
 }
 
 static void assign_lvar_offsets(Function *prog) {
-    int offset = 0;
-    for (Obj *var = prog->locals; var; var=var->next) {
-        offset += 8;
-        var->offset = -offset;
+    for (Function *fn = prog; fn; fn = fn->next) {
+        int offset = 0;
+        for (Obj *var = fn->locals; var; var = var->next) {
+            offset += 8;
+            var->offset = -offset;
+        }
+        fn->stack_size = align_to(offset, 16);
     }
-    prog->stack_size = align_to(offset, 16);
 }
 
 void codegen(Function* prog, CodeGenOption* option) {
     assign_lvar_offsets(prog);
+    printf(".intel_syntax noprefix\n");
+    for (Function *fn = prog; fn; fn = fn->next) {
 
-    emu_mode = option->cpu_emu;
-    if (emu_mode) {
-        printf("%%define movzb movzx\n");  // Macro for NASM
-        printf("BITS 64\n");
-        printf("  org 0x7c00\n");
-    } else {
-        printf(".intel_syntax noprefix\n");
 #ifdef __linux
-        printf(".global main\n");
-        printf("main:\n");
+        printf(".global %s\n", fn->name);
+        printf("%s:\n", fn->name);
 #else  // macOS
-        printf(".global _main\n");
-        printf("_main:\n");
+        printf(".global _%s\n", fn->name);
+        printf("_%s:\n", fn->name);
 #endif
-    }
+        current_fn = fn;
 
-    // Prologue
-    printf("  push rbp\n");
-    printf("  mov rbp, rsp\n");
-    printf("  sub rsp, %d\n", prog->stack_size);
+        // Prologue
+        printf("  push rbp\n");
+        printf("  mov rbp, rsp\n");
+        printf("  sub rsp, %d\n", fn->stack_size);
 
-    for (Node *n = prog->body; n; n = n->next) {
-        gen_stmt(n);
+        gen_stmt(fn->body);
         assert(depth == 0);
-    }
+        assert(fn->body->next == NULL);
 
-    // Epilogue
-    printf(".L.return:\n");
-    printf("  mov rsp, rbp\n");
-    printf("  pop rbp\n");
-
-    if (emu_mode)
-        printf("  jmp 0\n");
-    else
+        // Epilogue
+        printf(".L.return.%s:\n", fn->name);
+        printf("  mov rsp, rbp\n");
+        printf("  pop rbp\n");
         printf("  ret\n");
+    }
 }

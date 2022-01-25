@@ -195,7 +195,8 @@ static Type *declarator(Token **rest, Token *tok, Type *ty) {
         error_tok(tok, "expected a variable name");
 
     Token *ident_tok = tok;
-    ty = type_suffix(&tok, tok->next, ty);
+    tok = tok->next;
+    ty = type_suffix(&tok, tok, ty);
     ty->name = ident_tok;
     *rest = tok;
     return ty;
