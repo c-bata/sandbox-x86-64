@@ -97,6 +97,7 @@ static Node *compound_stmt(Token **rest, Token *tok);
 static Node *declaration(Token **rest, Token *tok);
 static Type *declspec(Token **rest, Token *tok);
 static Type *type_suffix(Token **rest, Token *tok, Type* ty);
+static Type *func_params(Token **rest, Token *tok);
 static Type *declarator(Token **rest, Token *tok, Type *ty);
 static Node *stmt(Token **rest, Token *tok);
 static Node *expr(Token **rest, Token *tok);
@@ -189,27 +190,29 @@ static Type *declspec(Token **rest, Token *tok) {
 }
 
 static Type *type_suffix(Token **rest, Token *tok, Type* ty) {
-    // type-suffix = ("(" func-params? ")")?
     if (!equal(tok, "("))
         return ty;  // not a function
 
+    ty = func_type(ty);
+    ty->params = func_params(&tok, tok);
+    *rest = skip(tok, ")");
+    return ty;
+}
+
+static Type *func_params(Token **rest, Token *tok) {
     Type head = {};
     Type *cur = &head;
     tok = tok->next;
-    // func-params = param ("," param)*
     while (!equal(tok, ")")) {
         if (cur != &head)
             tok = skip(tok, ",");
 
-        // param = declspec declarator
         Type *argty = declspec(&tok, tok);
         argty = declarator(&tok, tok, argty);
         cur = cur->next = copy_type(argty);
     }
-    ty = func_type(ty);
-    ty->params = head.next;
-    *rest = tok->next;
-    return ty;
+    *rest = tok;
+    return head.next;
 }
 
 static Type *declarator(Token **rest, Token *tok, Type *ty) {
