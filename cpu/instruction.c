@@ -447,7 +447,6 @@ static void rex_prefix(Emulator* emu) {
     ModRM modrm;
     parse_modrm(emu, &modrm);
     uint8_t reg = (r << 3) | modrm.reg_index;
-    // mod = modrm.mod;
     uint8_t rm = (b << 3) | modrm.rm;
     // scale = modrm.scale;
     // index = (x << 3) | modrm.index;
@@ -515,15 +514,21 @@ static void rex_prefix(Emulator* emu) {
 
         int is_carry = carry_flag_sub(val, imm8);
         update_rflags_sub(emu, val, imm8, result, is_carry);
-    } else if (po == 0x89 && modrm.mod == 3) {
-        // 48 89 C8 => mov rax, rdi
-        uint64_t value = get_register64(emu, reg);
-        set_register64(emu, rm, value);
     } else if (po == 0x89 && modrm.mod == 0) {
         // ex) 48 89 07 => mov [rdi],rax
         uint64_t addr = get_register64(emu, rm);
         uint64_t val = get_register64(emu, reg);
         set_memory64(emu, addr, val);
+    } else if (po == 0x89 && modrm.mod == 1) {
+        // 48 89 7d f8 => mov QWORD PTR [rbp-0x8],rdi
+        // ModRM=0x7d => 0111 1101 => mod 01, reg 111, rm 101
+        uint64_t addr = get_register64(emu, rm) + modrm.disp8;
+        uint64_t value = get_register64(emu, reg);
+        set_memory64(emu, addr, value);
+    } else if (po == 0x89 && modrm.mod == 3) {
+        // 48 89 C8 => mov rax, rdi
+        uint64_t value = get_register64(emu, reg);
+        set_register64(emu, rm, value);
     } else if (po == 0x8B) {
         // 1000 101w : mod reg r/m
         // ex) 48 8B 07 => mov rax,[rdi]
