@@ -25,6 +25,8 @@ static void gen_type(Type *ty) {
         printf("%d [label=\"Type Func\" color=green, style=filled]\n", (int) ty);
         printf("%d -> %d [label=\"return_ty\"]\n", (int) ty, (int) ty->return_ty);
         gen_type(ty->return_ty);
+    } else if (ty->kind == TY_ARRAY) {
+        printf("%d [label=\"Type Array\" color=green, style=filled]\n", (int) ty);
     }
     if (ty->base != NULL) {
         printf("%d -> %d [label=\"base\"]\n", (int) ty, (int) ty->base);

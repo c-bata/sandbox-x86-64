@@ -73,8 +73,10 @@ static Obj *new_lvar(char *name, Type *ty) {
 // | compound-stmt = (declaration | stmt)* "}"
 // | declaration   = declspec (declarator ("=" expr)? ("," declarator ("=" expr)?)*)? ";"
 // | declspec      = "int"
-// | type-suffix   = ("(" func-params? ")")?
-// | func-params   = param ("," param)*
+// | type-suffix   = "(" func-params
+// |               | "[" num "]"
+// |               | ε
+// | func-params   = param ("," param)* ")"
 // | param         = declspec declarator
 // | declarator    = "*"* ident type-suffix
 // | stmt          = expr ";" | "{" stmt* "}" | "return" expr ";"
@@ -190,13 +192,20 @@ static Type *declspec(Token **rest, Token *tok) {
 }
 
 static Type *type_suffix(Token **rest, Token *tok, Type* ty) {
-    if (!equal(tok, "("))
-        return ty;  // not a function
-
-    ty = func_type(ty);
-    ty->params = func_params(&tok, tok);
-    *rest = skip(tok, ")");
-    return ty;
+    if (equal(tok, "(")) {
+        ty = func_type(ty);
+        ty->params = func_params(&tok, tok);
+        *rest = tok;
+        return ty;
+    } else if (equal(tok, "[")) {
+        if (tok->next->kind != TK_NUM)
+            error_tok(tok->next, "expected a number");
+        int size = tok->next->val;
+        *rest = skip(tok->next->next, "]");
+        return array_of(ty, size);
+    } else {
+        return ty;
+    }
 }
 
 static Type *func_params(Token **rest, Token *tok) {
@@ -211,7 +220,7 @@ static Type *func_params(Token **rest, Token *tok) {
         argty = declarator(&tok, tok, argty);
         cur = cur->next = copy_type(argty);
     }
-    *rest = tok;
+    *rest = tok->next;
     return head.next;
 }
 
@@ -373,7 +382,7 @@ static Node *new_add(Node *lhs, Node *rhs, Token *tok) {
     }
 
     // ptr + num
-    rhs = new_binary(ND_MUL, rhs, new_node_num(8));
+    rhs = new_binary(ND_MUL, rhs, new_node_num(lhs->ty->base->size));
     return new_binary(ND_ADD, lhs, rhs);
 }
 
@@ -387,7 +396,7 @@ static Node *new_sub(Node *lhs, Node *rhs, Token *tok) {
 
     // ptr - num
     if (lhs->ty->base && is_integer(rhs->ty)) {
-        rhs = new_binary(ND_MUL, rhs, new_node_num(8));
+        rhs = new_binary(ND_MUL, rhs, new_node_num(lhs->ty->base->size));
         add_type(rhs);
         Node *node = new_binary(ND_SUB, lhs, rhs);
         node->ty = lhs->ty;
@@ -398,7 +407,7 @@ static Node *new_sub(Node *lhs, Node *rhs, Token *tok) {
     if (lhs->ty->base && rhs->ty->base) {
         Node *node = new_binary(ND_SUB, lhs, rhs);
         node->ty = ty_int;
-        return new_binary(ND_DIV, node, new_node_num(8));
+        return new_binary(ND_DIV, node, new_node_num(lhs->ty->base->size));
     }
     error_tok(tok, "invalid operations");
 }

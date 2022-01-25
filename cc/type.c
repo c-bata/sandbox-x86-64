@@ -1,7 +1,7 @@
 #include "9cc.h"
 #include <stdlib.h>
 
-Type *ty_int = &(Type){TY_INT};
+Type *ty_int = &(Type){TY_INT, 8};
 
 bool is_integer(Type *ty) {
     return ty->kind == TY_INT;
@@ -24,6 +24,15 @@ Type *func_type(Type *return_ty) {
     Type *ty = calloc(1, sizeof(Type));
     ty->kind = TY_FUNC;
     ty->return_ty = return_ty;
+    return ty;
+}
+
+Type *array_of(Type *base, int len) {
+    Type *ty = calloc(1, sizeof(Type));
+    ty->kind = TY_ARRAY;
+    ty->size = base->size * len;
+    ty->base = base;
+    ty->array_len = len;
     return ty;
 }
 
@@ -50,7 +59,11 @@ void add_type(Node *node) {
         case ND_MUL:
         case ND_DIV:
         case ND_NEG:
+            node->ty = node->lhs->ty;
+            return;
         case ND_ASSIGN:
+            if (node->lhs->ty->kind == TY_ARRAY)
+                error("not an lvalue"); // Add token in AST node for verbose error message
             node->ty = node->lhs->ty;
             return;
         case ND_EQ:
@@ -63,7 +76,10 @@ void add_type(Node *node) {
             node->ty = ty_int;
             return;
         case ND_ADDR:
-            node->ty = pointer_to(node->lhs->ty);
+            if (node->lhs->ty->kind == TY_ARRAY)
+                node->ty = pointer_to(node->lhs->ty->base);
+            else
+                node->ty = pointer_to(node->lhs->ty);
             return;
         case ND_DEREF:
             if (node->lhs->ty->kind == TY_PTR)
