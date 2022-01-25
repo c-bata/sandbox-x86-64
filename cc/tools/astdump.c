@@ -16,6 +16,18 @@ static void gen_type(Type *ty) {
         printf("%d -> %d [label=\"base\"]\n", (int) ty, (int) ty->base);
         gen_type(ty->base);
     }
+    if (ty->return_ty != NULL) {
+        printf("%d -> %d [label=\"return_ty\"]\n", (int) ty, (int) ty->return_ty);
+        gen_type(ty->return_ty);
+    }
+    if (ty->params != NULL) {
+        printf("%d -> %d [label=\"params\"]\n", (int) ty, (int) ty->params);
+        gen_type(ty->params);
+    }
+    if (ty->next != NULL) {
+        printf("%d -> %d [label=\"next\"]\n", (int) ty, (int) ty->next);
+        gen_type(ty->next);
+    }
 }
 
 static void gen_node(Node *node) {
@@ -114,6 +126,18 @@ static void gen_node(Node *node) {
     }
 }
 
+static void gen_obj(Obj *obj) {
+    printf("%d [label=\"Obj %s\" color=yellow, style=filled]\n", (int) obj, obj->name);
+
+    printf("%d -> %d [label=\"type\"]\n", (int) obj, (int) obj->ty);
+    gen_type(obj->ty);
+
+    if (obj->next) {
+        printf("%d -> %d [label=\"next\"]\n", (int) obj, (int) obj->next);
+        gen_obj(obj->next);
+    }
+}
+
 static void gen_func(Function *fn) {
     printf("%d [label=\"Function %s\" color=orange, style=filled]\n", (int) fn, fn->name);
     printf("%d -> %d [label=\"body\"]\n", (int) fn, (int) fn->body);
@@ -121,6 +145,10 @@ static void gen_func(Function *fn) {
 
     if (fn->next != NULL)
         gen_func(fn->next);
+    if (fn->params != NULL) {
+        printf("%d -> %d [label=\"params\"]\n", (int) fn, (int) fn->params);
+        gen_obj(fn->params);
+    }
 }
 
 int main(int argc, char **argv) {

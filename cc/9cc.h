@@ -55,6 +55,7 @@ typedef struct Function Function;
 struct Function {
     Function *next;
     char *name;
+    Obj *params;
     Node *body;
     Obj *locals;
     int stack_size;
@@ -125,12 +126,17 @@ struct Type {
     TypeKind kind;
     Type *base;   // Pointer
     Token *name;  // Declaration
-    Type *return_ty;  // for Function
+
+    // for Function
+    Type *return_ty;
+    Type *params;  // function arg types
+    Type *next;  // next argument type
 };
 
 extern Type *ty_int;
 
 bool is_integer(Type *ty);
+Type *copy_type(Type *src);
 Type *pointer_to(Type *base);
 Type *func_type(Type *return_ty);
 void add_type(Node *node);

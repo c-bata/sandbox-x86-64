@@ -68,25 +68,27 @@ static Obj *new_lvar(char *name, Type *ty) {
 }
 
 // EBNF
-// | program    = function-definition*
-// | function-definition = declspec declarator "{" compound-stmt
+// | program       = function*
+// | function      = declspec declarator "{" compound-stmt
 // | compound-stmt = (declaration | stmt)* "}"
-// | declaration = declspec (declarator ("=" expr)? ("," declarator ("=" expr)?)*)? ";"
-// | declspec = "int"
-// | type-suffix = ("(" func-params ")")?
-// | declarator = "*"* ident type-suffix
-// | stmt       = expr ";" | "{" stmt* "}" | "return" expr ";"
-// |              | "if" "(" expr ")" stmt ("else" stmt)?
-// |              | "while" "(" expr ")" stmt
-// |              | "for" "(" expr? ";" expr? ";" expr? ")" stmt
-// | expr       = assign
-// | assign     = equality ("=" assign)?
-// | equality   = relational ("==" relational | "!=" relational)*
-// | relational = add ("<" add | "<=" add | ">" add | ">=" add)*
-// | add        = mul ("+" mul | "-" mul)*
-// | mul        = unary ("*" unary | "/" unary)*
-// | unary      = ("+" | "-" | "*" | "&")? unary | primary
-// | primary    = num | ident ("(" (assign ("," assign)*)? ")")? | "(" expr ")"
+// | declaration   = declspec (declarator ("=" expr)? ("," declarator ("=" expr)?)*)? ";"
+// | declspec      = "int"
+// | type-suffix   = ("(" func-params? ")")?
+// | func-params   = param ("," param)*
+// | param         = declspec declarator
+// | declarator    = "*"* ident type-suffix
+// | stmt          = expr ";" | "{" stmt* "}" | "return" expr ";"
+// |                 | "if" "(" expr ")" stmt ("else" stmt)?
+// |                 | "while" "(" expr ")" stmt
+// |                 | "for" "(" expr? ";" expr? ";" expr? ")" stmt
+// | expr          = assign
+// | assign        = equality ("=" assign)?
+// | equality      = relational ("==" relational | "!=" relational)*
+// | relational    = add ("<" add | "<=" add | ">" add | ">=" add)*
+// | add           = mul ("+" mul | "-" mul)*
+// | mul           = unary ("*" unary | "/" unary)*
+// | unary         = ("+" | "-" | "*" | "&")? unary | primary
+// | primary       = num | ident ("(" (assign ("," assign)*)? ")")? | "(" expr ")"
 // ↓
 // High Priority
 
@@ -112,6 +114,13 @@ static char *get_ident(Token *tok) {
     return my_strndup(tok->loc, tok->len);
 }
 
+static void create_param_lvars(Type *param) {
+    if (param) {
+        create_param_lvars(param->next);
+        new_lvar(get_ident(param->name), param);
+    }
+}
+
 static Function *function(Token **rest, Token *tok) {
     Type *functy = declspec(&tok, tok);
     functy = declarator(&tok, tok, functy);
@@ -119,6 +128,8 @@ static Function *function(Token **rest, Token *tok) {
     locals = NULL;
     Function *fn = calloc(1, sizeof(Function));
     fn->name = get_ident(functy->name);
+    create_param_lvars(functy->params);
+    fn->params = locals;
 
     tok = skip(tok, "{");
     fn->body = compound_stmt(&tok, tok);
@@ -178,11 +189,27 @@ static Type *declspec(Token **rest, Token *tok) {
 }
 
 static Type *type_suffix(Token **rest, Token *tok, Type* ty) {
-    // type-suffix = ("()")?
+    // type-suffix = ("(" func-params? ")")?
     if (!equal(tok, "("))
-        return ty;
-    *rest = skip(tok->next, ")");
-    return func_type(ty);
+        return ty;  // not a function
+
+    Type head = {};
+    Type *cur = &head;
+    tok = tok->next;
+    // func-params = param ("," param)*
+    while (!equal(tok, ")")) {
+        if (cur != &head)
+            tok = skip(tok, ",");
+
+        // param = declspec declarator
+        Type *argty = declspec(&tok, tok);
+        argty = declarator(&tok, tok, argty);
+        cur = cur->next = copy_type(argty);
+    }
+    ty = func_type(ty);
+    ty->params = head.next;
+    *rest = tok->next;
+    return ty;
 }
 
 static Type *declarator(Token **rest, Token *tok, Type *ty) {
