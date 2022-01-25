@@ -2,6 +2,20 @@
 #include "stdio.h"
 #include "../9cc.h"
 
+static int align_to(int n, int align) {
+    return (n + align - 1) / align * align;
+}
+static void assign_lvar_offsets(Function *prog) {
+    for (Function *fn = prog; fn; fn = fn->next) {
+        int offset = 0;
+        for (Obj *var = fn->locals; var; var = var->next) {
+            offset += 8;
+            var->offset = -offset;
+        }
+        fn->stack_size = align_to(offset, 16);
+    }
+}
+
 static void gen_type(Type *ty) {
     if (ty->kind == TY_INT) {
         printf("%d [label=\"Type INT\" color=green, style=filled]\n", (int) ty);
@@ -127,7 +141,8 @@ static void gen_node(Node *node) {
 }
 
 static void gen_obj(Obj *obj) {
-    printf("%d [label=\"Obj %s\" color=yellow, style=filled]\n", (int) obj, obj->name);
+    printf("%d [label=\"Obj %s [rbp-%d]\" color=yellow, style=filled]\n",
+           (int) obj, obj->name, -obj->offset);
 
     printf("%d -> %d [label=\"type\"]\n", (int) obj, (int) obj->ty);
     gen_type(obj->ty);
@@ -149,6 +164,10 @@ static void gen_func(Function *fn) {
         printf("%d -> %d [label=\"params\"]\n", (int) fn, (int) fn->params);
         gen_obj(fn->params);
     }
+    // if (fn->locals != NULL) {
+    //     printf("%d -> %d [label=\"locals\"]\n", (int) fn, (int) fn->locals);
+    //     gen_obj(fn->locals);
+    // }
 }
 
 int main(int argc, char **argv) {
@@ -159,6 +178,7 @@ int main(int argc, char **argv) {
 
     Token *tok = tokenize(argv[1]);
     Function *prog = parse(tok);
+    assign_lvar_offsets(prog);
 
     printf("digraph g{\n");
     gen_func(prog);

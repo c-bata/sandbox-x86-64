@@ -6,7 +6,6 @@
 static int depth;
 static char *argreg[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 static Function *current_fn;
-static bool emu_mode = false;
 
 static void gen_expr(Node* node);
 
@@ -231,6 +230,10 @@ void codegen(Function* prog, CodeGenOption* option) {
         printf("  push rbp\n");
         printf("  mov rbp, rsp\n");
         printf("  sub rsp, %d\n", fn->stack_size);
+
+        int nparams = 0;
+        for (Obj *param = fn->params; param; param = param->next)
+            printf("  mov [rbp-%d], %s\n", -param->offset, argreg[nparams++]);
 
         gen_stmt(fn->body);
         assert(depth == 0);
