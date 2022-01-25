@@ -7,6 +7,10 @@ static void gen_type(Type *ty) {
         printf("%d [label=\"Type INT\" color=green, style=filled]\n", (int) ty);
     } else if (ty->kind == TY_PTR) {
         printf("%d [label=\"Type PTR\" color=green, style=filled]\n", (int) ty);
+    } else if (ty->kind == TY_FUNC) {
+        printf("%d [label=\"Type Func\" color=green, style=filled]\n", (int) ty);
+        printf("%d -> %d [label=\"return_ty\"]\n", (int) ty, (int) ty->return_ty);
+        gen_type(ty->return_ty);
     }
     if (ty->base != NULL) {
         printf("%d -> %d [label=\"base\"]\n", (int) ty, (int) ty->base);
@@ -110,6 +114,15 @@ static void gen_node(Node *node) {
     }
 }
 
+static void gen_func(Function *fn) {
+    printf("%d [label=\"Function %s\" color=orange, style=filled]\n", (int) fn, fn->name);
+    printf("%d -> %d [label=\"body\"]\n", (int) fn, (int) fn->body);
+    gen_node(fn->body);
+
+    if (fn->next != NULL)
+        gen_func(fn->next);
+}
+
 int main(int argc, char **argv) {
     if (argc != 2) {
         error("Invalid arguments.");
@@ -120,7 +133,7 @@ int main(int argc, char **argv) {
     Function *prog = parse(tok);
 
     printf("digraph g{\n");
-    gen_node(prog->body);
+    gen_func(prog);
     printf("}\n");
     return 0;
 }
