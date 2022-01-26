@@ -89,7 +89,8 @@ static Obj *new_lvar(char *name, Type *ty) {
 // | relational    = add ("<" add | "<=" add | ">" add | ">=" add)*
 // | add           = mul ("+" mul | "-" mul)*
 // | mul           = unary ("*" unary | "/" unary)*
-// | unary         = ("+" | "-" | "*" | "&")? unary | primary
+// | unary         = ("+" | "-" | "*" | "&")? unary | postfix
+// | postfix       = primary ("[" expr "]")*
 // | primary       = num | ident ("(" (assign ("," assign)*)? ")")? | "(" expr ")"
 // ↓
 // High Priority
@@ -109,6 +110,7 @@ static Node *relational(Token **rest, Token *tok);
 static Node *add(Token **rest, Token *tok);
 static Node *mul(Token **rest, Token *tok);
 static Node *unary(Token **rest, Token *tok);
+static Node *postfix(Token **rest, Token *tok);
 static Node *primary(Token **rest, Token *tok);
 
 static char *get_ident(Token *tok) {
@@ -462,7 +464,20 @@ static Node *unary(Token **rest, Token *tok) {
     if (equal(tok, "*")) {
         return new_unary(ND_DEREF, unary(rest, tok->next));
     }
-    return primary(rest, tok);
+    return postfix(rest, tok);
+}
+
+static Node *postfix(Token **rest, Token *tok) {
+    Node *node = primary(&tok, tok);
+    while (equal(tok, "[")) {
+        // a[i] is a syntax sugar of *(a+i)
+        Token *start = tok;
+        Node *idx = expr(&tok, tok->next);
+        node = new_unary(ND_DEREF, new_add(node, idx, start));
+        tok = skip(tok, "]");
+    }
+    *rest = tok;
+    return node;
 }
 
 static Node *primary(Token **rest, Token *tok) {
