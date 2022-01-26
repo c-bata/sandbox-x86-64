@@ -91,7 +91,7 @@ static Obj *new_lvar(char *name, Type *ty) {
 // | mul           = unary ("*" unary | "/" unary)*
 // | unary         = ("+" | "-" | "*" | "&")? unary | postfix
 // | postfix       = primary ("[" expr "]")*
-// | primary       = num | ident ("(" (assign ("," assign)*)? ")")? | "(" expr ")"
+// | primary       = num | ident ("(" (assign ("," assign)*)? ")")? | "(" expr ")" | "sizeof" unary
 // ↓
 // High Priority
 
@@ -511,6 +511,13 @@ static Node *primary(Token **rest, Token *tok) {
         Node *node = new_var_node(var);
         *rest = tok->next;
         return node;
+    }
+    if (equal(tok, "sizeof")) {
+        assert(tok->kind == TK_KEYWORD);
+        Node *node = unary(&tok, tok->next);
+        add_type(node);
+        *rest = tok;
+        return new_node_num(node->ty->size);
     }
     if (tok->kind == TK_NUM) {
         Node *node = new_node_num(tok->val);
