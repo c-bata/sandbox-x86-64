@@ -17,6 +17,7 @@ Type *pointer_to(Type *base) {
     Type *ty = calloc(1, sizeof(Type));
     ty->kind = TY_PTR;
     ty->base = base;
+    ty->size = 8;
     return ty;
 }
 

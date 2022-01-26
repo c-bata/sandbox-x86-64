@@ -1,15 +1,41 @@
 #include <assert.h>
+#include <stdlib.h>
 #include "stdio.h"
 #include "../9cc.h"
+
+// Avoid inserting the same graph node.
+typedef struct Mark Mark;
+struct Mark {
+    int id_from;
+    int id_to;
+    Mark *next;
+};
+Mark mark_head = {};
+
+static bool mark(int id_from, int id_to) {
+    Mark *cur = &mark_head;
+    while (cur->next) {
+        cur = cur->next;
+        if (cur->id_from == id_from && cur->id_to == id_to)
+            return false;
+    }
+
+    Mark *new_mark = calloc(1, sizeof(Mark));
+    new_mark->id_from = id_from;
+    new_mark->id_to = id_to;
+    cur->next = new_mark;
+    return true;
+}
 
 static int align_to(int n, int align) {
     return (n + align - 1) / align * align;
 }
+
 static void assign_lvar_offsets(Function *prog) {
     for (Function *fn = prog; fn; fn = fn->next) {
         int offset = 0;
         for (Obj *var = fn->locals; var; var = var->next) {
-            offset += 8;
+            offset += var->ty->size;
             var->offset = -offset;
         }
         fn->stack_size = align_to(offset, 16);
@@ -18,17 +44,19 @@ static void assign_lvar_offsets(Function *prog) {
 
 static void gen_type(Type *ty) {
     if (ty->kind == TY_INT) {
-        printf("%d [label=\"Type INT\" color=green, style=filled]\n", (int) ty);
+        printf("%d [label=\"TY_INT\" color=green, style=filled]\n", (int) ty);
     } else if (ty->kind == TY_PTR) {
-        printf("%d [label=\"Type PTR\" color=green, style=filled]\n", (int) ty);
+        printf("%d [label=\"TY_PTR\" color=green, style=filled]\n", (int) ty);
     } else if (ty->kind == TY_FUNC) {
-        printf("%d [label=\"Type Func\" color=green, style=filled]\n", (int) ty);
+        printf("%d [label=\"TY_FUNC\" color=green, style=filled]\n", (int) ty);
         printf("%d -> %d [label=\"return_ty\"]\n", (int) ty, (int) ty->return_ty);
         gen_type(ty->return_ty);
     } else if (ty->kind == TY_ARRAY) {
-        printf("%d [label=\"Type Array\" color=green, style=filled]\n", (int) ty);
+        printf("%d [label=\"TY_ARRAY[%d] (size=%d)\" color=green, style=filled]\n",
+               (int) ty, ty->array_len, ty->size);
     }
-    if (ty->base != NULL) {
+
+    if (ty->base && mark((int) ty, (int) ty->base)) {
         printf("%d -> %d [label=\"base\"]\n", (int) ty, (int) ty->base);
         gen_type(ty->base);
     }
@@ -92,10 +120,10 @@ static void gen_node(Node *node) {
         printf("%d [label=\"%d\" color=orange, style=filled]\n", (int) node, node->kind);
     }
 
-    if (node->var != NULL) {
-        printf("%d -> %d [label=\"var-ty\"]\n", (int) node, (int) node->var->ty);
-        gen_type(node->var->ty);
-    }
+    // if (node->var != NULL) {
+    //     printf("%d -> %d [label=\"var-ty\"]\n", (int) node, (int) node->var->ty);
+    //     gen_type(node->var->ty);
+    // }
     if (node->ty != NULL) {
         printf("%d -> %d [label=\"ty\"]\n", (int) node, (int) node->ty);
         gen_type(node->ty);
@@ -156,7 +184,8 @@ static void gen_obj(Obj *obj) {
 }
 
 static void gen_func(Function *fn) {
-    printf("%d [label=\"Function %s\" color=orange, style=filled]\n", (int) fn, fn->name);
+    printf("%d [label=\"Function %s (stack_size=%d)\" color=orange, style=filled]\n",
+           (int) fn, fn->name, fn->stack_size);
     printf("%d -> %d [label=\"body\"]\n", (int) fn, (int) fn->body);
     gen_node(fn->body);
 
@@ -166,10 +195,10 @@ static void gen_func(Function *fn) {
         printf("%d -> %d [label=\"params\"]\n", (int) fn, (int) fn->params);
         gen_obj(fn->params);
     }
-    // if (fn->locals != NULL) {
-    //     printf("%d -> %d [label=\"locals\"]\n", (int) fn, (int) fn->locals);
-    //     gen_obj(fn->locals);
-    // }
+    if (fn->locals != NULL) {
+        printf("%d -> %d [label=\"locals\"]\n", (int) fn, (int) fn->locals);
+        gen_obj(fn->locals);
+    }
 }
 
 int main(int argc, char **argv) {

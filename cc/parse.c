@@ -74,7 +74,7 @@ static Obj *new_lvar(char *name, Type *ty) {
 // | declaration   = declspec (declarator ("=" expr)? ("," declarator ("=" expr)?)*)? ";"
 // | declspec      = "int"
 // | type-suffix   = "(" func-params
-// |               | "[" num "]"
+// |               | "[" num "]" type-suffix
 // |               | ε
 // | func-params   = param ("," param)* ")"
 // | param         = declspec declarator
@@ -201,7 +201,9 @@ static Type *type_suffix(Token **rest, Token *tok, Type* ty) {
         if (tok->next->kind != TK_NUM)
             error_tok(tok->next, "expected a number");
         int size = tok->next->val;
-        *rest = skip(tok->next->next, "]");
+        tok = skip(tok->next->next, "]");
+        ty = type_suffix(&tok, tok, ty);
+        *rest = tok;
         return array_of(ty, size);
     } else {
         return ty;
