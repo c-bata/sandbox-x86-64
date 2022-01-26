@@ -151,6 +151,7 @@ static Node *compound_stmt(Token **rest, Token *tok) {
             cur = cur->next = declaration(&tok, tok);
         else
             cur = cur->next = stmt(&tok, tok);
+        add_type(cur);
     }
 
     node->body = head.next;

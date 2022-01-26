@@ -43,6 +43,20 @@ static void gen_addr(Node *node) {
     }
 }
 
+// Load a value from where rax is pointing to.
+static void load(Type *ty) {
+    if (ty->kind == TY_ARRAY) {
+        // If it is an array, do not attempt to load a value to the
+        // register because in general we can't load an entire array to a
+        // register. As a result, the result of an evaluation of an array
+        // becomes not the array itself but the address of the array.
+        // This is where "array is automatically converted to a pointer to
+        // the first element of the array in C" occurs.
+        return;
+    }
+    printf("  mov rax, [rax]\n");  // [address] -> rax
+}
+
 static void gen_expr(Node* node) {
     switch (node->kind) {
         case ND_NUM:
@@ -61,14 +75,16 @@ static void gen_expr(Node* node) {
             return;
         case ND_VAR:
             gen_addr(node); // address -> rax
-            printf("  mov rax, [rax]\n");  // [address] -> rax
+            assert(node->ty);
+            load(node->ty);
             return;
         case ND_ADDR:
             gen_addr(node->lhs);  // address -> rax
             return;
         case ND_DEREF:
             gen_expr(node->lhs);  // address -> rax
-            printf("  mov rax, [rax]\n");  // [address] -> rax
+            assert(node->ty);
+            load(node->ty);
             return;
         case ND_FUNCALL: {
             printf("  mov rax, 0\n");

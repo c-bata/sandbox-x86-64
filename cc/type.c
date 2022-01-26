@@ -49,9 +49,9 @@ void add_type(Node *node) {
     add_type(node->init);
     add_type(node->inc);
 
-    for (Node *n = node->body; n; n=n->next)
+    for (Node *n = node->body; n; n = n->next)
         add_type(n);
-    for (Node *n = node->args; n; n=n->next)
+    for (Node *n = node->args; n; n = n->next)
         add_type(n);
 
     switch (node->kind) {
@@ -71,10 +71,12 @@ void add_type(Node *node) {
         case ND_NE:
         case ND_LT:
         case ND_LE:
-        case ND_VAR:
         case ND_NUM:
         case ND_FUNCALL:
             node->ty = ty_int;
+            return;
+        case ND_VAR:
+            node->ty = node->var->ty;
             return;
         case ND_ADDR:
             if (node->lhs->ty->kind == TY_ARRAY)
@@ -83,10 +85,9 @@ void add_type(Node *node) {
                 node->ty = pointer_to(node->lhs->ty);
             return;
         case ND_DEREF:
-            if (node->lhs->ty->kind == TY_PTR)
-                node->ty = node->lhs->ty->base;
-            else
-                node->ty = ty_int;  // must not reach here?
+            if (!node->lhs->ty->base)
+                error("invalid pointer dereference");
+            node->ty = node->lhs->ty->base;
             return;
     }
 }
