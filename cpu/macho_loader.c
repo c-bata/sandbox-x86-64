@@ -19,26 +19,8 @@ Emulator* load_macho64(char* filepath) {
 
 #include <mach-o/loader.h>
 #include <mach-o/fat.h>
-#include <assert.h>
 
-typedef struct {
-    uint64_t seg_text_vmaddr;
-    uint64_t seg_text_vmsize;
-
-    uint64_t sect_text_vmaddr;
-    uint64_t sect_text_offset;
-    size_t sect_text_size;
-
-    // Always 4GB. the file specifies that the first 4GB of the process' address space
-    // will be mapped as non-executable, non-writable, non-readable.
-    uint64_t pagezero_vmaddr;
-    uint64_t pagezero_vmsize;
-
-    uint64_t lc_main_entryoff;	// file (__TEXT) offset of main()
-    uint64_t lc_main_stacksize; // if not zero, initial stack size
-} MachO;
-
-void parse_macho64(void *head, MachO *macho) {
+void parse_macho64(void *head, Emulator *emu) {
     int i, j;
     struct mach_header_64 *header = (struct mach_header_64 *) head;
     int is_executable = header->filetype == MH_EXECUTE;
@@ -51,32 +33,39 @@ void parse_macho64(void *head, MachO *macho) {
     }
 
     void *ptr = head + sizeof(struct mach_header_64);
+    uint64_t seg_text_vmaddr = 0, lc_main_entryoff = 0;
+    uint64_t pagezero_vmaddr = 0, pagezero_vmsize = 0;
     for (i=0; i<=header->ncmds; i++) {
         struct load_command *cmd = (struct load_command *) ptr;
         if (cmd->cmd == LC_SEGMENT_64) {
             struct segment_command_64 *seg = (struct segment_command_64 *) ptr;
             if (strcmp(seg->segname, SEG_TEXT) == 0) {
-                macho->seg_text_vmaddr = seg->vmaddr;
-                macho->seg_text_vmsize = seg->vmsize;
+                seg_text_vmaddr = seg->vmaddr;
+                // seg_text_vmsize = seg->vmsize;
                 for (j=0; j<seg->nsects; j++) {
                     struct section_64 *sec = (struct section_64 *) (ptr + sizeof(struct segment_command_64));
                     if (strcmp(sec->sectname, SECT_TEXT) == 0) {
-                        macho->sect_text_vmaddr = sec->addr;
-                        macho->sect_text_offset = sec->offset;
-                        macho->sect_text_size = sec->size;
+                        vm_memcpy(emu->memory, sec->addr, head + sec->offset, sec->size);
                     }
                 }
+            } else if (strcmp(seg->segname, SEG_DATA) == 0) {
+                vm_memcpy(emu->memory, seg->vmaddr, head + seg->fileoff, seg->vmsize);
             } else if (strcmp(seg->segname, SEG_PAGEZERO) == 0) {
-                macho->pagezero_vmaddr = seg->vmaddr;
-                macho->pagezero_vmsize = seg->vmsize;
+                // Always 4GB. the file specifies that the first 4GB of the process' address space
+                // will be mapped as non-executable, non-writable, non-readable.
+                pagezero_vmaddr = seg->vmaddr;
+                pagezero_vmsize = seg->vmsize;
             }
         } else if (cmd->cmd == LC_MAIN) {
             struct entry_point_command *entrypoint = (struct entry_point_command *) ptr;
-            macho->lc_main_entryoff = entrypoint->entryoff;
-            macho->lc_main_stacksize = entrypoint->stacksize;
+            lc_main_entryoff = entrypoint->entryoff;
+            // lc_main_stacksize = entrypoint->stacksize;
         }
         ptr += cmd->cmdsize;
     }
+    emu->rip = seg_text_vmaddr + lc_main_entryoff;
+    emu->registers[RSP] = pagezero_vmaddr + pagezero_vmsize;
+    push64(emu, 0x0); // Push return address
 }
 
 Emulator* load_macho64(char* filepath) {
@@ -91,24 +80,12 @@ Emulator* load_macho64(char* filepath) {
     struct stat sb;
     fstat(fd, &sb);
 
-    MachO* macho = malloc(sizeof(MachO));
     head = mmap(NULL, sb.st_size, PROT_READ, MAP_SHARED, fd, 0);
-
-    // TODO: Pass Emulator* object instead of MachO*.
-    parse_macho64(head, macho);
-
-    uint64_t rip = macho->seg_text_vmaddr + macho->lc_main_entryoff;
-    assert(macho->sect_text_vmaddr == rip);
-    uint64_t rsp = macho->pagezero_vmaddr + macho->pagezero_vmsize;
-
-    Emulator* emu = create_emu(rip, rsp);
-    vm_memcpy(emu->memory, macho->sect_text_vmaddr, head + macho->sect_text_offset, macho->sect_text_size);
-
+    Emulator* emu = create_emu(0x0, 0x0);
+    parse_macho64(head, emu);
     munmap(head, sb.st_size);
-    free(macho);
     close(fd);
 
-    push64(emu, 0x00); // Push return address
     return emu;
 }
 #endif
