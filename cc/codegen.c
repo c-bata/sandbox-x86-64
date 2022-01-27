@@ -30,9 +30,17 @@ static void gen_addr(Node *node) {
     switch (node->kind) {
         case ND_VAR:
             assert(node->var != NULL);
-            // "lea dst, [src]" calculates the absolute address of src,
-            // then load it into rax.
-            printf("  lea rax, [rbp-%d]\n", -node->var->offset);
+            if (node->var->is_local) {
+                // "lea dst, [src]" calculates the absolute address of src,
+                // then load it into rax.
+                printf("  lea rax, [rbp-%d]\n", -node->var->offset);
+            } else {
+#ifdef __linux
+                printf("  lea rax, %s[rip]\n", node->var->name);
+#else
+                printf("  lea rax, _%s[rip]\n", node->var->name);
+#endif
+            }
             return;
         case ND_DEREF:
             // ex) *x = 5;
@@ -228,16 +236,34 @@ static void assign_lvar_offsets(Obj *prog) {
     }
 }
 
-void codegen(Obj* prog, CodeGenOption* option) {
-    assign_lvar_offsets(prog);
-    printf(".intel_syntax noprefix\n");
-    for (Obj *fn = prog; fn; fn = fn->next) {
+static void emit_data(Obj *prog) {
+    for (Obj *var = prog; var; var = var->next) {
+        if (var->is_function)
+            continue;
 
+        printf("  .data\n");
 #ifdef __linux
-        printf(".global %s\n", fn->name);
+        printf("  .global %s\n", var->name);
+        printf("%s:\n", var->name);
+#else  // macOS
+        printf("  .global _%s\n", var->name);
+        printf("_%s:\n", var->name);
+#endif
+        printf("  .zero %d\n", var->ty->size);
+    }
+}
+
+void emit_text(Obj* prog, CodeGenOption* option) {
+    for (Obj *fn = prog; fn; fn = fn->next) {
+        if (!fn->is_function)
+            continue;
+
+        printf("  .text\n");
+#ifdef __linux
+        printf("  .global %s\n", fn->name);
         printf("%s:\n", fn->name);
 #else  // macOS
-        printf(".global _%s\n", fn->name);
+        printf("  .global _%s\n", fn->name);
         printf("_%s:\n", fn->name);
 #endif
         current_fn = fn;
@@ -261,4 +287,10 @@ void codegen(Obj* prog, CodeGenOption* option) {
         printf("  pop rbp\n");
         printf("  ret\n");
     }
+}
+void codegen(Obj* prog, CodeGenOption* option) {
+    assign_lvar_offsets(prog);
+    printf(".intel_syntax noprefix\n");
+    emit_data(prog);
+    emit_text(prog, option);
 }

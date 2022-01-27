@@ -51,7 +51,9 @@ struct Obj {
     // Local variable
     int offset; // Offset from RBP
 
-    // Global variable or function
+    // Local or Global
+    bool is_local;
+    // Variable or function
     bool is_function;
 
     // Function

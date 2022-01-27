@@ -77,6 +77,7 @@ static Obj *new_var_obj(char *name, Type *ty) {
 static Obj *new_lvar(char *name, Type *ty) {
     Obj *var = new_var_obj(name, ty);
     var->next = locals;
+    var->is_local = true;
     locals = var;
     return var;
 }
@@ -84,6 +85,7 @@ static Obj *new_lvar(char *name, Type *ty) {
 static Obj *new_gvar(char *name, Type *ty) {
     Obj *var = new_var_obj(name, ty);
     var->next = globals;
+    var->is_local = false;
     globals = var;
     return var;
 }
