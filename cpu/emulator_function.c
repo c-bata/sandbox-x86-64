@@ -107,15 +107,15 @@ uint64_t get_register64(Emulator* emu, int index) {
  *                         |--------|
  * */
 uint64_t get_register8(Emulator* emu, int index) {
-    if (index < 4) { // al, cl, dl, bl
+    if (index < 8) { // al, cl, dl, bl, spl, bpl, sil, dil
         return emu->registers[index] & 0xff;
-    } else { // ah, ch, dh, bh
-        return (emu->registers[index - 4] >> 8) & 0xff;
+    } else { // ah, ch, dh, bh, sph, bph, bpl, sih, dih
+        return (emu->registers[index - 8] >> 8) & 0xff;
     }
 }
 
 void set_register8(Emulator* emu, int index, uint8_t value) {
-    if (index < 4) {
+    if (index < 8) {
         uint32_t r = emu->registers[index] & 0xffffff00;
         emu->registers[index] = r | (uint32_t)value;
     } else {

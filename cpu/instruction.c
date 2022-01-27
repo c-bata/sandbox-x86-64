@@ -360,6 +360,14 @@ static void rex_prefix(Emulator* emu) {
             uint64_t value = get_code32(emu, 1);
             emu->registers[reg] = value;
             emu->rip += 5;  // opcode 1 byte, operand 4 bytes
+        } else if (opcode32 == 0x88) {
+            // mov_rm8_r8
+            // ex) 40 88 75 FE => mov BYTE PTR [rbp-0x2],sil
+            emu->rip += 1;
+            ModRM modrm;
+            parse_modrm(emu, &modrm);
+            uint8_t r8 = get_r8(emu, &modrm);
+            set_rm8(emu, &modrm, r8);
         } else if (opcode32 == 0x89) {
             // mov_rm32_r32
             // 44 89 45 ec => movl %r8d, -0x14(%rbp)
@@ -392,9 +400,10 @@ static void rex_prefix(Emulator* emu) {
         return;
     }
 
-    // Primary opcode + Secondary opcode (No ModR/M)
+    // Primary opcode + Secondary opcode + ModR/M
     uint8_t so = get_code8(emu, 0);
     if (po == 0x0F && so == 0xAF) { // Signed multiply
+        // TODO: Parse ModR/M here.
         uint8_t oprand = get_code8(emu, 1);
         emu->rip += 2;
 
@@ -423,19 +432,28 @@ static void rex_prefix(Emulator* emu) {
         set_register64(emu, reg1, result);
         return;
     } else if (po == 0x0F && so == 0xB6) {
-        uint8_t oprand = get_code8(emu, 1);
-        emu->rip += 2;
-        // ex) 48 0F B6 C0 => movzx rax, al
-        //     48 => 0100 1000 => W=1, R=0, X=0, B=0
-        //     C0 => 1100 0000 => reg1 = 000 = 0, reg2 = 000 = 0
-        // ex) 4C 0F B6 D0 => movzx r10, al
-        //     4C => 0100 1100 => W=1, R=1, X=0, B=0
-        //     D0 => 1101 0000 => reg1 = 000 = 0, reg2 = 000 = 0
-        uint8_t reg1 = (r << 3) | ((oprand & 0x38) >> 3); // 0011 1000
-        uint8_t reg2 = (b << 3) | (oprand & 0x07);  // 0000 B000 | (oprand & 0000 0111)
-
-        uint64_t result = get_register8(emu, reg2);
-        set_register64(emu, reg1, result);
+        emu->rip += 1;
+        ModRM modrm;
+        parse_modrm(emu, &modrm);
+        // TODO: We may rewrite here like 'set_rm8(emu, &modrm, get_r8(emu, &modrm));'
+        if (modrm.mod == 0) {
+            // ex) 48 0F B6 00 => movzx  rax,BYTE PTR [rax]
+            uint8_t reg1 = (r << 3) | (modrm.reg_index >> 3);
+            uint8_t reg2 = (b << 3) | (modrm.rm);
+            uint64_t addr = get_register64(emu, reg2);
+            set_register8(emu, reg1, get_memory8(emu, addr));
+        } else if (modrm.mod == 3) {
+            // ex) 48 0F B6 C0 => movzx rax, al
+            //     48 => 0100 1000 => W=1, R=0, X=0, B=0
+            //     C0 => 1100 0000 => reg1 = 000 = 0, reg2 = 000 = 0
+            // ex) 4C 0F B6 D0 => movzx r10, al
+            //     4C => 0100 1100 => W=1, R=1, X=0, B=0
+            //     D0 => 1101 0000 => reg1 = 000 = 0, reg2 = 000 = 0
+            uint8_t reg1 = (r << 3) | (modrm.reg_index >> 3);
+            uint8_t reg2 = (b << 3) | (modrm.rm);
+            uint64_t result = get_register8(emu, reg2);
+            set_register64(emu, reg1, result);
+        }
         return;
     } else if (po == 0x0F) {
         printf("not implemented: rex_prefix=%02x / w=1 rex_opcode=%02x%02x\n",
