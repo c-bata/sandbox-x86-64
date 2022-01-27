@@ -96,7 +96,7 @@ static Obj *new_lvar(char *name, Type *ty) {
 // ↓
 // High Priority
 
-static Function *function(Token **rest, Token *tok);
+static Obj *function(Token **rest, Token *tok);
 static Node *compound_stmt(Token **rest, Token *tok);
 static Node *declaration(Token **rest, Token *tok);
 static Type *declspec(Token **rest, Token *tok);
@@ -127,12 +127,13 @@ static void create_param_lvars(Type *param) {
     }
 }
 
-static Function *function(Token **rest, Token *tok) {
+static Obj *function(Token **rest, Token *tok) {
     Type *functy = declspec(&tok, tok);
     functy = declarator(&tok, tok, functy);
 
     locals = NULL;
-    Function *fn = calloc(1, sizeof(Function));
+    Obj *fn = calloc(1, sizeof(Obj));
+    fn->is_function = true;
     fn->name = get_ident(functy->name);
     create_param_lvars(functy->params);
     fn->params = locals;
@@ -532,9 +533,9 @@ static Node *primary(Token **rest, Token *tok) {
     error_tok(tok, "expected an expression");
 }
 
-Function *parse(Token *tok) {
-    Function head = {};
-    Function *cur = &head;
+Obj *parse(Token *tok) {
+    Obj head = {};
+    Obj *cur = &head;
     while (tok->kind != TK_EOF)
         cur = cur->next = function(&tok, tok);
     return head.next;

@@ -5,7 +5,7 @@
 
 static int depth;
 static char *argreg[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
-static Function *current_fn;
+static Obj *current_fn;
 
 static void gen_expr(Node* node);
 
@@ -217,8 +217,8 @@ static int align_to(int n, int align) {
     return (n + align - 1) / align * align;
 }
 
-static void assign_lvar_offsets(Function *prog) {
-    for (Function *fn = prog; fn; fn = fn->next) {
+static void assign_lvar_offsets(Obj *prog) {
+    for (Obj *fn = prog; fn; fn = fn->next) {
         int offset = 0;
         for (Obj *var = fn->locals; var; var = var->next) {
             offset += var->ty->size;
@@ -228,10 +228,10 @@ static void assign_lvar_offsets(Function *prog) {
     }
 }
 
-void codegen(Function* prog, CodeGenOption* option) {
+void codegen(Obj* prog, CodeGenOption* option) {
     assign_lvar_offsets(prog);
     printf(".intel_syntax noprefix\n");
-    for (Function *fn = prog; fn; fn = fn->next) {
+    for (Obj *fn = prog; fn; fn = fn->next) {
 
 #ifdef __linux
         printf(".global %s\n", fn->name);

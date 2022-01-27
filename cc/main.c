@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <ctype.h>
+#include <assert.h>
 #include "9cc.h"
 
 int opt_remove_at(int argc, char* argv[], int index) {
@@ -34,7 +35,7 @@ int main(int argc, char **argv) {
     }
 
     Token *tok = tokenize(argv[1]);
-    Function *prog = parse(tok);
+    Obj *prog = parse(tok);
     codegen(prog, options);
     return 0;
 }

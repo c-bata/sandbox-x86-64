@@ -31,8 +31,8 @@ static int align_to(int n, int align) {
     return (n + align - 1) / align * align;
 }
 
-static void assign_lvar_offsets(Function *prog) {
-    for (Function *fn = prog; fn; fn = fn->next) {
+static void assign_lvar_offsets(Obj *prog) {
+    for (Obj *fn = prog; fn; fn = fn->next) {
         int offset = 0;
         for (Obj *var = fn->locals; var; var = var->next) {
             offset += var->ty->size;
@@ -183,7 +183,9 @@ static void gen_obj(Obj *obj) {
     }
 }
 
-static void gen_func(Function *fn) {
+static void gen_func(Obj *fn) {
+    assert(fn->is_function);
+
     printf("%d [label=\"Function %s (stack_size=%d)\" color=orange, style=filled]\n",
            (int) fn, fn->name, fn->stack_size);
     printf("%d -> %d [label=\"body\"]\n", (int) fn, (int) fn->body);
@@ -208,7 +210,7 @@ int main(int argc, char **argv) {
     }
 
     Token *tok = tokenize(argv[1]);
-    Function *prog = parse(tok);
+    Obj *prog = parse(tok);
     assign_lvar_offsets(prog);
 
     printf("digraph g{\n");
