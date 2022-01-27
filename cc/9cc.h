@@ -93,6 +93,7 @@ struct Node {
     int val;       // used only if kind==ND_NUM
     Obj *var;      // used only if kind==ND_VAR
     Type *ty;      // Type. int or pointer
+    Token *tok;    // for verbose error log
 
     // Block
     Node *body;

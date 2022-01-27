@@ -64,7 +64,7 @@ void add_type(Node *node) {
             return;
         case ND_ASSIGN:
             if (node->lhs->ty->kind == TY_ARRAY)
-                error("not an lvalue"); // Add token in AST node for verbose error message
+                error_tok(node->tok, "not an lvalue");
             node->ty = node->lhs->ty;
             return;
         case ND_EQ:
@@ -86,7 +86,7 @@ void add_type(Node *node) {
             return;
         case ND_DEREF:
             if (!node->lhs->ty->base)
-                error("invalid pointer dereference");
+                error_tok(node->tok, "invalid pointer dereference");
             node->ty = node->lhs->ty->base;
             return;
     }

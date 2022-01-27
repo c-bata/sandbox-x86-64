@@ -39,7 +39,7 @@ static void gen_addr(Node *node) {
             gen_expr(node->lhs);  // pointer x (address) -> rax
             return;
         default:
-            error("not an lvalue");
+            error_tok(node->tok, "not an lvalue");
     }
 }
 
@@ -147,7 +147,7 @@ static void gen_expr(Node* node) {
 #endif
             return;
     }
-    error("invalid expression");
+    error_tok(node->tok, "invalid expression");
 }
 
 static void gen_stmt(Node* node) {
@@ -208,7 +208,7 @@ static void gen_stmt(Node* node) {
             printf(".Lend%d:\n", unique_label);
             return;
     }
-    error("invalid statement: %d", node->kind);
+    error_tok(node->tok, "invalid statement: %d", node->kind);
 }
 
 // Round up `n` to the nearest multiple of `align`. For instance,
