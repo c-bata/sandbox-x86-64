@@ -5,7 +5,8 @@
 
 // All local variable instances created during parsing are
 // accumulated to this list.
-Obj *locals;
+static Obj *locals;
+static Obj *globals;
 
 char* my_strndup(const char* s, int len) {
     // Write my own strndup function to avoid
@@ -59,12 +60,24 @@ static Node *new_var(Obj* var, Token *tok) {
     return node;
 }
 
-static Obj *new_lvar(char *name, Type *ty) {
+static Obj *new_var_obj(char *name, Type *ty) {
     Obj *var = calloc(1, sizeof(Obj));
     var->name = name;
-    var->next = locals;
     var->ty = ty;
+    return var;
+}
+
+static Obj *new_lvar(char *name, Type *ty) {
+    Obj *var = new_var_obj(name, ty);
+    var->next = locals;
     locals = var;
+    return var;
+}
+
+static Obj *new_gvar(char *name, Type *ty) {
+    Obj *var = new_var_obj(name, ty);
+    var->next = globals;
+    globals = var;
     return var;
 }
 
@@ -96,7 +109,7 @@ static Obj *new_lvar(char *name, Type *ty) {
 // ↓
 // High Priority
 
-static Obj *function(Token **rest, Token *tok);
+static void *function(Token **rest, Token *tok);
 static Node *compound_stmt(Token **rest, Token *tok);
 static Node *declaration(Token **rest, Token *tok);
 static Type *declspec(Token **rest, Token *tok);
@@ -127,14 +140,13 @@ static void create_param_lvars(Type *param) {
     }
 }
 
-static Obj *function(Token **rest, Token *tok) {
+static void *function(Token **rest, Token *tok) {
     Type *functy = declspec(&tok, tok);
     functy = declarator(&tok, tok, functy);
 
     locals = NULL;
-    Obj *fn = calloc(1, sizeof(Obj));
+    Obj *fn = new_gvar(get_ident(functy->name), functy);
     fn->is_function = true;
-    fn->name = get_ident(functy->name);
     create_param_lvars(functy->params);
     fn->params = locals;
 
@@ -534,9 +546,8 @@ static Node *primary(Token **rest, Token *tok) {
 }
 
 Obj *parse(Token *tok) {
-    Obj head = {};
-    Obj *cur = &head;
+    globals = NULL;
     while (tok->kind != TK_EOF)
-        cur = cur->next = function(&tok, tok);
-    return head.next;
+        function(&tok, tok);
+    return globals;
 }
