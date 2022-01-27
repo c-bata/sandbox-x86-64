@@ -4,7 +4,8 @@
 #include "9cc.h"
 
 static int depth;
-static char *argreg[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+static char *argreg8[] = {"dil", "sil", "dl", "cl", "r8b", "r9b"};
+static char *argreg64[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 static Obj *current_fn;
 
 static void gen_expr(Node* node);
@@ -62,7 +63,22 @@ static void load(Type *ty) {
         // the first element of the array in C" occurs.
         return;
     }
-    printf("  mov rax, [rax]\n");  // [address] -> rax
+
+    // [address] -> rax
+    if (ty->size == 1)
+        printf("  movzx rax, BYTE PTR [rax]\n");
+    else
+        printf("  mov rax, [rax]\n");
+}
+
+static void store(Type *ty) {
+    // address -> rdi
+    pop("rdi");
+    // rvalue -> [address]
+    if (ty->size == 1)
+        printf("  mov BYTE PTR [rdi], al\n");
+    else
+        printf("  mov [rdi], rax\n");
 }
 
 static void gen_expr(Node* node) {
@@ -78,8 +94,7 @@ static void gen_expr(Node* node) {
             gen_addr(node->lhs); // lvar address -> rax
             push();  // address -> stack
             gen_expr(node->rhs);  // rvalue -> rax
-            pop("rdi");  // address -> rdi
-            printf("  mov [rdi], rax\n");  // rvalue -> [address]
+            store(node->ty);
             return;
         case ND_VAR:
             gen_addr(node); // address -> rax
@@ -105,7 +120,7 @@ static void gen_expr(Node* node) {
             }
 
             for (int i = nargs-1; i>=0; i--)
-                pop(argreg[i]);
+                pop(argreg64[i]);
 
 #ifdef __linux
             printf("  call %s\n", node->funcname); // ret -> rax
@@ -274,8 +289,12 @@ void emit_text(Obj* prog, CodeGenOption* option) {
         printf("  sub rsp, %d\n", fn->stack_size);
 
         int nparams = 0;
-        for (Obj *param = fn->params; param; param = param->next)
-            printf("  mov [rbp-%d], %s\n", -param->offset, argreg[nparams++]);
+        for (Obj *param = fn->params; param; param = param->next) {
+            if (param->ty->size == 1)
+                printf("  mov [rbp-%d], %s\n", -param->offset, argreg8[nparams++]);
+            else
+                printf("  mov [rbp-%d], %s\n", -param->offset, argreg64[nparams++]);
+        }
 
         gen_stmt(fn->body);
         assert(depth == 0);
