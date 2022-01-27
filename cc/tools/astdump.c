@@ -50,6 +50,8 @@ static void assign_lvar_offsets(Obj *prog) {
 static void gen_type(Type *ty) {
     if (ty->kind == TY_INT) {
         printf("%d [label=\"TY_INT\" color=green, style=filled]\n", (int) ty);
+    } else if (ty->kind == TY_CHAR) {
+        printf("%d [label=\"TY_CHAR\" color=green, style=filled]\n", (int) ty);
     } else if (ty->kind == TY_PTR) {
         printf("%d [label=\"TY_PTR\" color=green, style=filled]\n", (int) ty);
     } else if (ty->kind == TY_FUNC) {
@@ -118,7 +120,7 @@ static void gen_node(Node *node) {
     } else if (node->kind == ND_FOR) {
         printf("%d [label=\"FOR\" color=orange, style=filled]\n", (int) node);
     } else if (node->kind == ND_FUNCALL) {
-        printf("%d [label=\"%s()\" color=orange, style=filled]\n", (int) node, node->funcname);
+        printf("%d [label=\"FUNCALL %s()\" color=orange, style=filled]\n", (int) node, node->funcname);
     } else {
         printf("%d [label=\"%d\" color=orange, style=filled]\n", (int) node, node->kind);
     }

@@ -96,7 +96,7 @@ static Obj *new_gvar(char *name, Type *ty) {
 // | global-variable = (declarator ("," declarator)*)? ";"
 // | compound-stmt   = (declaration | stmt)* "}"
 // | declaration     = declspec (declarator ("=" expr)? ("," declarator ("=" expr)?)*)? ";"
-// | declspec        = "int"
+// | declspec        = "int" | "char"
 // | type-suffix     = "(" func-params
 // |                 | "[" num "]" type-suffix
 // |                 | ε
@@ -178,13 +178,18 @@ static void global_variable(Token **rest, Token *tok, Type *basety) {
     *rest = skip(tok, ";");
 }
 
+// Returns true if a given token represents a type.
+static bool is_typename(Token *tok) {
+    return equal(tok, "char") || equal(tok, "int");
+}
+
 static Node *compound_stmt(Token **rest, Token *tok) {
     Node *node = new_node(ND_BLOCK, tok);
 
     Node head = {};
     Node *cur = &head;
     while (!equal(tok, "}")) {
-        if (equal(tok, "int"))
+        if (is_typename(tok))
             cur = cur->next = declaration(&tok, tok);
         else
             cur = cur->next = stmt(&tok, tok);
@@ -226,8 +231,15 @@ static Node *declaration(Token **rest, Token *tok) {
 }
 
 static Type *declspec(Token **rest, Token *tok) {
-    *rest = skip(tok, "int");
-    return ty_int;
+    Type *ty;
+    if (equal(tok, "int"))
+        ty = ty_int;
+    else if (equal(tok, "char"))
+        ty = ty_char;
+    else
+        error_tok(tok, "expected 'int' or 'char'");
+    *rest = tok->next;
+    return ty;
 }
 
 static Type *type_suffix(Token **rest, Token *tok, Type* ty) {
