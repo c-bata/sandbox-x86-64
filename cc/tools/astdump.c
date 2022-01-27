@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdlib.h>
+#include <string.h>
 #include "stdio.h"
 #include "../9cc.h"
 
@@ -8,21 +9,25 @@ typedef struct Mark Mark;
 struct Mark {
     int id_from;
     int id_to;
+    char *label;
     Mark *next;
 };
 Mark mark_head = {};
 
-static bool mark(int id_from, int id_to) {
+static bool mark(int id_from, int id_to, char *label) {
     Mark *cur = &mark_head;
     while (cur->next) {
         cur = cur->next;
-        if (cur->id_from == id_from && cur->id_to == id_to)
+        if (cur->id_from == id_from &&
+            cur->id_to == id_to &&
+            strcmp(cur->label, label) == 0)
             return false;
     }
 
     Mark *new_mark = calloc(1, sizeof(Mark));
     new_mark->id_from = id_from;
     new_mark->id_to = id_to;
+    new_mark->label = label;
     cur->next = new_mark;
     return true;
 }
@@ -49,18 +54,16 @@ static void gen_type(Type *ty) {
         printf("%d [label=\"TY_PTR\" color=green, style=filled]\n", (int) ty);
     } else if (ty->kind == TY_FUNC) {
         printf("%d [label=\"TY_FUNC\" color=green, style=filled]\n", (int) ty);
-        printf("%d -> %d [label=\"return_ty\"]\n", (int) ty, (int) ty->return_ty);
-        gen_type(ty->return_ty);
     } else if (ty->kind == TY_ARRAY) {
         printf("%d [label=\"TY_ARRAY[%d] (size=%d)\" color=green, style=filled]\n",
                (int) ty, ty->array_len, ty->size);
     }
 
-    if (ty->base && mark((int) ty, (int) ty->base)) {
+    if (ty->base && mark((int) ty, (int) ty->base, "base")) {
         printf("%d -> %d [label=\"base\"]\n", (int) ty, (int) ty->base);
         gen_type(ty->base);
     }
-    if (ty->return_ty != NULL) {
+    if (ty->return_ty && mark((int)ty, (int)ty->return_ty, "return_ty")) {
         printf("%d -> %d [label=\"return_ty\"]\n", (int) ty, (int) ty->return_ty);
         gen_type(ty->return_ty);
     }
@@ -174,8 +177,10 @@ static void gen_obj(Obj *obj) {
     printf("%d [label=\"Obj %s [rbp-%d]\" color=yellow, style=filled]\n",
            (int) obj, obj->name, -obj->offset);
 
-    printf("%d -> %d [label=\"type\"]\n", (int) obj, (int) obj->ty);
-    gen_type(obj->ty);
+    if (obj->ty && mark((int) obj, (int) obj->ty, "type")) {
+        printf("%d -> %d [label=\"type\"]\n", (int) obj, (int) obj->ty);
+        gen_type(obj->ty);
+    }
 
     if (obj->next) {
         printf("%d -> %d [label=\"next\"]\n", (int) obj, (int) obj->next);
@@ -183,23 +188,35 @@ static void gen_obj(Obj *obj) {
     }
 }
 
-static void gen_func(Obj *fn) {
-    assert(fn->is_function);
+static void gen_global(Obj *global) {
+    if (global->is_function) {
+        printf("%d [label=\"Function %s (stack_size=%d)\" color=aquamarine, style=filled]\n",
+               (int) global, global->name, global->stack_size);
+        printf("%d -> %d [label=\"body\"]\n", (int) global, (int) global->body);
+        gen_node(global->body);
 
-    printf("%d [label=\"Function %s (stack_size=%d)\" color=orange, style=filled]\n",
-           (int) fn, fn->name, fn->stack_size);
-    printf("%d -> %d [label=\"body\"]\n", (int) fn, (int) fn->body);
-    gen_node(fn->body);
-
-    if (fn->next != NULL)
-        gen_func(fn->next);
-    if (fn->params != NULL) {
-        printf("%d -> %d [label=\"params\"]\n", (int) fn, (int) fn->params);
-        gen_obj(fn->params);
+        if (global->next) {
+            printf("%d -> %d [label=\"next\"]\n", (int) global, (int) global->next);
+            gen_global(global->next);
+        }
+        if (global->params) {
+            printf("%d -> %d [label=\"params\"]\n", (int) global, (int) global->params);
+            gen_obj(global->params);
+        }
+        if (global->locals) {
+            printf("%d -> %d [label=\"locals\"]\n", (int) global, (int) global->locals);
+            gen_obj(global->locals);
+        }
+    } else {
+        // global variables
+        printf("%d [label=\"Global Var %s\" color=aqua, style=filled]\n",
+               (int) global, global->name);
+        if (global->next)
+            gen_global(global->next);
     }
-    if (fn->locals != NULL) {
-        printf("%d -> %d [label=\"locals\"]\n", (int) fn, (int) fn->locals);
-        gen_obj(fn->locals);
+    if (global->ty) {
+        printf("%d -> %d [label=\"ty\"]\n", (int) global, (int) global->ty);
+        gen_type(global->ty);
     }
 }
 
@@ -214,7 +231,7 @@ int main(int argc, char **argv) {
     assign_lvar_offsets(prog);
 
     printf("digraph g{\n");
-    gen_func(prog);
+    gen_global(prog);
     printf("}\n");
     return 0;
 }

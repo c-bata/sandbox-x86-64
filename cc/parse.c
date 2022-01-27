@@ -20,11 +20,18 @@ char* my_strndup(const char* s, int len) {
     return dup;
 }
 
-// Find a local variable by name.
+// Find a local/global variable by name.
 static Obj *find_var(Token *tok) {
-    for (Obj *var = locals; var; var = var->next)
+    Obj *var;
+    for (var = locals; var; var = var->next)
         if (strlen(var->name) == tok->len && !strncmp(tok->loc, var->name, tok->len))
             return var;
+    for (var = globals; var; var = var->next) {
+        if (var->is_function)
+            continue;
+        if (strlen(var->name) == tok->len && !strncmp(tok->loc, var->name, tok->len))
+            return var;
+    }
     return NULL;
 }
 
@@ -82,34 +89,36 @@ static Obj *new_gvar(char *name, Type *ty) {
 }
 
 // EBNF
-// | program       = function*
-// | function      = declspec declarator "{" compound-stmt
-// | compound-stmt = (declaration | stmt)* "}"
-// | declaration   = declspec (declarator ("=" expr)? ("," declarator ("=" expr)?)*)? ";"
-// | declspec      = "int"
-// | type-suffix   = "(" func-params
-// |               | "[" num "]" type-suffix
-// |               | ε
-// | func-params   = param ("," param)* ")"
-// | param         = declspec declarator
-// | declarator    = "*"* ident type-suffix
-// | stmt          = expr ";" | "{" stmt* "}" | "return" expr ";"
-// |                 | "if" "(" expr ")" stmt ("else" stmt)?
-// |                 | "while" "(" expr ")" stmt
-// |                 | "for" "(" expr? ";" expr? ";" expr? ")" stmt
-// | expr          = assign
-// | assign        = equality ("=" assign)?
-// | equality      = relational ("==" relational | "!=" relational)*
-// | relational    = add ("<" add | "<=" add | ">" add | ">=" add)*
-// | add           = mul ("+" mul | "-" mul)*
-// | mul           = unary ("*" unary | "/" unary)*
-// | unary         = ("+" | "-" | "*" | "&")? unary | postfix
-// | postfix       = primary ("[" expr "]")*
-// | primary       = num | ident ("(" (assign ("," assign)*)? ")")? | "(" expr ")" | "sizeof" unary
+// | program         = (declspec (function | global-variable))*
+// | function        = declarator "{" compound-stmt
+// | global-variable = (declarator ("," declarator)*)? ";"
+// | compound-stmt   = (declaration | stmt)* "}"
+// | declaration     = declspec (declarator ("=" expr)? ("," declarator ("=" expr)?)*)? ";"
+// | declspec        = "int"
+// | type-suffix     = "(" func-params
+// |                 | "[" num "]" type-suffix
+// |                 | ε
+// | func-params     = param ("," param)* ")"
+// | param           = declspec declarator
+// | declarator      = "*"* ident type-suffix
+// | stmt            = expr ";" | "{" stmt* "}" | "return" expr ";"
+// |                   | "if" "(" expr ")" stmt ("else" stmt)?
+// |                   | "while" "(" expr ")" stmt
+// |                   | "for" "(" expr? ";" expr? ";" expr? ")" stmt
+// | expr            = assign
+// | assign          = equality ("=" assign)?
+// | equality        = relational ("==" relational | "!=" relational)*
+// | relational      = add ("<" add | "<=" add | ">" add | ">=" add)*
+// | add             = mul ("+" mul | "-" mul)*
+// | mul             = unary ("*" unary | "/" unary)*
+// | unary           = ("+" | "-" | "*" | "&")? unary | postfix
+// | postfix         = primary ("[" expr "]")*
+// | primary         = num | ident ("(" (assign ("," assign)*)? ")")? | "(" expr ")" | "sizeof" unary
 // ↓
 // High Priority
 
-static void *function(Token **rest, Token *tok);
+static void function(Token **rest, Token *tok, Type *basety);
+static void global_variable(Token **rest, Token *tok, Type *basety);
 static Node *compound_stmt(Token **rest, Token *tok);
 static Node *declaration(Token **rest, Token *tok);
 static Type *declspec(Token **rest, Token *tok);
@@ -140,9 +149,8 @@ static void create_param_lvars(Type *param) {
     }
 }
 
-static void *function(Token **rest, Token *tok) {
-    Type *functy = declspec(&tok, tok);
-    functy = declarator(&tok, tok, functy);
+static void function(Token **rest, Token *tok, Type *basety) {
+    Type *functy = declarator(&tok, tok, basety);
 
     locals = NULL;
     Obj *fn = new_gvar(get_ident(functy->name), functy);
@@ -154,7 +162,18 @@ static void *function(Token **rest, Token *tok) {
     fn->body = compound_stmt(&tok, tok);
     fn->locals = locals;
     *rest = tok;
-    return fn;
+}
+
+static void global_variable(Token **rest, Token *tok, Type *basety) {
+    int i = 0;
+    while(!equal(tok, ";")) {
+        if (i++ > 0)
+            tok = skip(tok, ",");
+
+        Type *ty = declarator(&tok, tok, basety);
+        new_gvar(get_ident(ty->name), ty);
+    }
+    *rest = skip(tok, ";");
 }
 
 static Node *compound_stmt(Token **rest, Token *tok) {
@@ -545,9 +564,23 @@ static Node *primary(Token **rest, Token *tok) {
     error_tok(tok, "expected an expression");
 }
 
+static bool is_function(Token *tok, Type* basety) {
+    if (equal(tok, ";"))
+        return false;
+
+    Type *ty = declarator(&tok, tok, basety);
+    return ty->kind == TY_FUNC;
+}
+
 Obj *parse(Token *tok) {
     globals = NULL;
-    while (tok->kind != TK_EOF)
-        function(&tok, tok);
+    while (tok->kind != TK_EOF) {
+        Type *basety = declspec(&tok, tok);
+        if (is_function(tok, basety)) {
+            function(&tok, tok, basety);
+        } else {
+            global_variable(&tok, tok, basety);
+        }
+    }
     return globals;
 }
