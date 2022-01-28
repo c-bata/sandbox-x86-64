@@ -41,13 +41,7 @@ void parse_macho64(void *head, Emulator *emu) {
             struct segment_command_64 *seg = (struct segment_command_64 *) ptr;
             if (strcmp(seg->segname, SEG_TEXT) == 0) {
                 seg_text_vmaddr = seg->vmaddr;
-                // seg_text_vmsize = seg->vmsize;
-                for (j=0; j<seg->nsects; j++) {
-                    struct section_64 *sec = (struct section_64 *) (ptr + sizeof(struct segment_command_64));
-                    if (strcmp(sec->sectname, SECT_TEXT) == 0) {
-                        vm_memcpy(emu->memory, sec->addr, head + sec->offset, sec->size);
-                    }
-                }
+                vm_memcpy(emu->memory, seg->vmaddr, head + seg->fileoff, seg->vmsize);
             } else if (strcmp(seg->segname, SEG_DATA) == 0) {
                 vm_memcpy(emu->memory, seg->vmaddr, head + seg->fileoff, seg->vmsize);
             } else if (strcmp(seg->segname, SEG_PAGEZERO) == 0) {
