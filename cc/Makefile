@@ -8,10 +8,10 @@ all: 9cc tokendump astdump
 9cc: $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
-tokendump: tools/tokendump.c tokenize.c
+tokendump: tools/tokendump.c tokenize.c my_string.c
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
-astdump: tools/astdump.c tokenize.c parse.c type.c
+astdump: tools/astdump.c tokenize.c parse.c type.c my_string.c
 	$(CC) $(CFLAGS) -Wno-pointer-to-int-cast -o $@ $^ $(LDFLAGS)
 
 $(OBJS): 9cc.h

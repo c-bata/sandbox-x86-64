@@ -211,8 +211,12 @@ static void gen_global(Obj *global) {
         }
     } else {
         // global variables
-        printf("%d [label=\"Global Var %s\" color=aqua, style=filled]\n",
-               (int) global, global->name);
+        if (global->init_data)
+            printf("%d [label=\"Global Var %s (init_data=%s)\" color=aqua, style=filled]\n",
+                   (int) global, global->name, global->init_data);
+        else
+            printf("%d [label=\"Global Var %s\" color=aqua, style=filled]\n",
+                   (int) global, global->name);
         if (global->next)
             gen_global(global->next);
     }

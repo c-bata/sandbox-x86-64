@@ -19,6 +19,7 @@ typedef enum {
     TK_IDENT,   // Identifiers
     TK_PUNCT,   // Punctuators
     TK_KEYWORD, // Reserved keywords
+    TK_STR,     // String literals
     TK_NUM,     // Numeric literals
     TK_EOF,     // End-of-file marker
 } TokenKind;
@@ -27,6 +28,7 @@ struct Token {
     TokenKind kind;  // Token type
     Token *next;     // Next token
     int val;         // Used only if kind==TK_NUM
+    char *str;       // Used only if kind==TK_STR (must terminate with '\0')
     char *loc;       // Token location
     int len;         // Token length
 };
@@ -55,6 +57,9 @@ struct Obj {
     bool is_local;
     // Variable or function
     bool is_function;
+
+    // Global variable
+    char *init_data;
 
     // Function
     Obj *params;
@@ -161,5 +166,10 @@ struct CodeGenOption {
 };
 
 void codegen(Obj* prog, CodeGenOption* option);
+
+//
+// my_string.c
+//
+char* my_strndup(const char* s, int len);
 
 #endif

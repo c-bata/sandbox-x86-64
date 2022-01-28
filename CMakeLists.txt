@@ -7,9 +7,9 @@ project(sandbox-x86-64 C)
 set(CMAKE_C_STANDARD 11)
 
 # for C compiler
-add_executable(9cc cc/main.c cc/codegen.c cc/parse.c cc/tokenize.c cc/type.c)
-add_executable(tokendump cc/tools/tokendump.c)
-add_executable(astdump cc/tools/astdump.c)
+add_executable(9cc cc/main.c cc/codegen.c cc/parse.c cc/tokenize.c cc/type.c cc/my_string.c)
+add_executable(tokendump cc/tools/tokendump.c cc/my_string.c)
+add_executable(astdump cc/tools/astdump.c cc/my_string.c)
 
 # for CPU emulator
 add_executable(cpu cpu/main.c cpu/instruction.c cpu/emulator_function.c cpu/modrm.c cpu/io.c

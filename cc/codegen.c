@@ -264,7 +264,13 @@ static void emit_data(Obj *prog) {
         printf("  .global _%s\n", var->name);
         printf("_%s:\n", var->name);
 #endif
-        printf("  .zero %d\n", var->ty->size);
+        if (var->init_data) {
+            // TODO(c-bata): Replace here with "  .string %s\n"
+            for (int i = 0; i < var->ty->size; i++)
+                printf("  .byte %d\n", var->init_data[i]);
+        } else {
+            printf("  .zero %d\n", var->ty->size);
+        }
     }
 }
 

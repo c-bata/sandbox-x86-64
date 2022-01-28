@@ -1,24 +1,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <stdio.h>
 #include "9cc.h"
 
 // All local variable instances created during parsing are
 // accumulated to this list.
 static Obj *locals;
 static Obj *globals;
-
-char* my_strndup(const char* s, int len) {
-    // Write my own strndup function to avoid
-    // 'strndup.c no such file or directory' error.
-    char* dup = malloc(sizeof(char)*(len+1));
-    int i;
-    for (i=0; i<len; i++) {
-        dup[i] = s[i];
-    }
-    dup[len] = '\0';
-    return dup;
-}
 
 // Find a local/global variable by name.
 static Obj *find_var(Token *tok) {
@@ -90,6 +79,20 @@ static Obj *new_gvar(char *name, Type *ty) {
     return var;
 }
 
+static char *new_unique_name(void) {
+    static int id = 0;
+    char *buf = calloc(1, 20);
+    sprintf(buf, ".L..%d", id++);
+    return buf;
+}
+
+static Obj *new_string_literal(Token *tok) {
+    Type *ty = array_of(ty_char, tok->len - 2 + 1);  // -2 for double quotes, +1 for '\0'
+    Obj *var = new_gvar(new_unique_name(), ty);
+    var->init_data = tok->str;
+    return var;
+}
+
 // EBNF
 // | program         = (declspec (function | global-variable))*
 // | function        = declarator "{" compound-stmt
@@ -115,7 +118,7 @@ static Obj *new_gvar(char *name, Type *ty) {
 // | mul             = unary ("*" unary | "/" unary)*
 // | unary           = ("+" | "-" | "*" | "&")? unary | postfix
 // | postfix         = primary ("[" expr "]")*
-// | primary         = num | ident ("(" (assign ("," assign)*)? ")")? | "(" expr ")" | "sizeof" unary
+// | primary         = num | str | ident ("(" (assign ("," assign)*)? ")")? | "(" expr ")" | "sizeof" unary
 // ↓
 // High Priority
 
@@ -572,6 +575,12 @@ static Node *primary(Token **rest, Token *tok) {
     }
     if (tok->kind == TK_NUM) {
         Node *node = new_num(tok->val, tok);
+        *rest = tok->next;
+        return node;
+    }
+    if (tok->kind == TK_STR) {
+        Obj *var = new_string_literal(tok);
+        Node *node = new_var(var, tok);
         *rest = tok->next;
         return node;
     }

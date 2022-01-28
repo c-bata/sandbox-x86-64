@@ -126,6 +126,21 @@ Token *tokenize(char *p) {
             continue;
         }
 
+        // Read string
+        if (*p == '"') {
+            char *start = p;
+            do {
+                p++;
+                if (*p == '\n' || *p == '\0')
+                    error_at(start, "unclosed string literal");
+            } while (*p != '"');
+            p++;  // skip a double quote.
+
+            Token *tok = new_token(TK_STR, start, p);
+            tok->str = my_strndup(start + 1, p - start - 2);
+            cur = cur->next = tok;
+        }
+
         // Punctuators
         int punct_len = read_punct(p);
         if (punct_len) {

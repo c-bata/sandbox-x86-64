@@ -27,7 +27,13 @@ int main(int argc, char **argv) {
         } else if (current -> kind == TK_NUM) {
             char base[128] = "NUMBER: \t";
             strncat(base, current->loc, current->len);
-            printf("%s\n", base);
+            printf("%s", base);
+            printf("\tval=%d\n", current->val);
+        } else if (current -> kind == TK_STR) {
+            char base[128] = "STRING: \t";
+            strncat(base, current->loc, current->len);
+            printf("%s", base);
+            printf("\tstr=%s\n", current->str);
         } else if (current -> kind == TK_EOF) {
             printf("EOF\n");
         } else {
