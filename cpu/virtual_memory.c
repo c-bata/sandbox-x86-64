@@ -64,6 +64,7 @@ void vm_fread(VirtualMemory* vm, uint64_t vmaddr, FILE* src, size_t size) {
 void vm_memcpy(VirtualMemory* vm, uint64_t vmaddr, void* src, size_t size) {
     uint64_t pos_start = vmaddr;
     uint64_t pos_end = vmaddr + size;
+    void* src_start = src;
 
     int64_t rest, n_bytes;
     rest = (int64_t) size;
@@ -77,8 +78,11 @@ void vm_memcpy(VirtualMemory* vm, uint64_t vmaddr, void* src, size_t size) {
             n_bytes = pos_end - pos_start;
         }
         uint16_t page_offset = pos_start % PAGE_SIZE;
-        memcpy(page->buffer + page_offset, src, n_bytes);
+        memcpy(page->buffer + page_offset, src_start, n_bytes);
+
         rest -= n_bytes;
+        src_start += n_bytes;
+        pos_start += n_bytes;
     }
 }
 

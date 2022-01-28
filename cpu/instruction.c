@@ -441,6 +441,8 @@ static void rex_prefix(Emulator* emu) {
             uint8_t reg1 = (r << 3) | (modrm.reg_index >> 3);
             uint8_t reg2 = (b << 3) | (modrm.rm);
             uint64_t addr = get_register64(emu, reg2);
+            // movzx - Move zero-extended
+            set_register64(emu, reg1, 0);
             set_register8(emu, reg1, get_memory8(emu, addr));
         } else if (modrm.mod == 3) {
             // ex) 48 0F B6 C0 => movzx rax, al
@@ -452,6 +454,8 @@ static void rex_prefix(Emulator* emu) {
             uint8_t reg1 = (r << 3) | (modrm.reg_index >> 3);
             uint8_t reg2 = (b << 3) | (modrm.rm);
             uint64_t result = get_register8(emu, reg2);
+            // movzx - Move zero-extended
+            set_register64(emu, reg1, 0);
             set_register64(emu, reg1, result);
         }
         return;
