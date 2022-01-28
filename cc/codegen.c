@@ -264,8 +264,9 @@ static void emit_data(Obj *prog) {
         printf("  .global _%s\n", var->name);
         printf("_%s:\n", var->name);
 #endif
-        if (var->init_data) {
-            // TODO(c-bata): Replace here with "  .string %s\n"
+        if (var->ty->kind == TY_ARRAY && var->ty->base->kind == TY_CHAR) {
+            printf("  .string \"%s\"\n", var->init_data);
+        } else if (var->init_data) {
             for (int i = 0; i < var->ty->size; i++)
                 printf("  .byte %d\n", var->init_data[i]);
         } else {
