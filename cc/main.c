@@ -1,8 +1,6 @@
-#include <stdlib.h>
-#include <stdbool.h>
+#include <stdio.h>
 #include <string.h>
-#include <ctype.h>
-#include <assert.h>
+#include <stdlib.h>
 #include "9cc.h"
 
 int opt_remove_at(int argc, char* argv[], int index) {
@@ -18,13 +16,21 @@ int opt_remove_at(int argc, char* argv[], int index) {
     }
 }
 
+static void usage() {
+    fprintf(stderr, "9cc [ -o <path> ] <file>\n");
+    exit(1);
+}
+
 int main(int argc, char **argv) {
-    CodeGenOption* options = calloc(1, sizeof(CodeGenOption));
     int i = 1;
+    char *opt_o = NULL;
     while (i < argc) {
-        if (strcmp(argv[i], "--cpuemu") == 0) {
-            options->cpu_emu = true;
+        if (strcmp(argv[i], "-o") == 0) {
             argc = opt_remove_at(argc, argv, i);
+            opt_o = argv[i];
+            argc = opt_remove_at(argc, argv, i);
+        } else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
+            usage();
         } else {
             i++;
         }
@@ -36,6 +42,16 @@ int main(int argc, char **argv) {
 
     Token *tok = tokenize(argv[1]);
     Obj *prog = parse(tok);
-    codegen(prog, options);
+
+    FILE* fout = stdout;
+    if (opt_o != NULL)
+        fout = fopen(opt_o, "w");
+    if (fout == NULL)
+        error("error: failed to open %s.", opt_o);
+
+    codegen(prog, fout);
+
+    if (opt_o == NULL)
+        fclose(fout);
     return 0;
 }

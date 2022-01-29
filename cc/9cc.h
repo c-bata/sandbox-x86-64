@@ -1,7 +1,7 @@
 #ifndef CC_H_
 #define CC_H_
 
-#define _POSIX_C_SOURCE 200809L
+#include <stdio.h>
 #include <stdbool.h>
 
 typedef struct Type Type;
@@ -160,12 +160,7 @@ void add_type(Node *node);
 // codegen.c
 //
 
-typedef struct CodeGenOption CodeGenOption;
-struct CodeGenOption {
-    bool cpu_emu;
-};
-
-void codegen(Obj* prog, CodeGenOption* option);
+void codegen(Obj *prog, FILE *out);
 
 //
 // my_string.c

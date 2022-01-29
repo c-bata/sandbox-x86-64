@@ -20,7 +20,7 @@ assert() {
   expected="$1"
   input="$2"
 
-  ./9cc "$input" > $tmpdir/tmp.s || exit
+  ./9cc -o $tmpdir/tmp.s "$input" || exit
   gcc -o $tmpdir/tmp $tmpdir/tmp.s $tmpdir/tmp2.o
   $tmpdir/tmp
   actual="$?"
