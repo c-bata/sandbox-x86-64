@@ -116,7 +116,7 @@ static Obj *new_string_literal(Token *tok) {
 // | relational      = add ("<" add | "<=" add | ">" add | ">=" add)*
 // | add             = mul ("+" mul | "-" mul)*
 // | mul             = unary ("*" unary | "/" unary)*
-// | unary           = ("+" | "-" | "*" | "&")? unary | postfix
+// | unary           = ("+" | "-" | "*" | "&" | "++" | "--")? unary | postfix
 // | postfix         = primary ("[" expr "]")*
 // | primary         = num | str | ident ("(" (assign ("," assign)*)? ")")? | "(" expr ")" | "sizeof" unary
 // ↓
@@ -517,6 +517,22 @@ static Node *unary(Token **rest, Token *tok) {
 
     if (equal(tok, "*")) {
         return new_unary(ND_DEREF, unary(rest, tok->next), tok);
+    }
+
+    // Read "++i" as (i=i+1)
+    if (equal(tok, "++")) {
+        Token *start = tok;
+        Node *lhs = unary(rest, tok->next);
+        Node *rhs = new_add(lhs, new_num(1, start), start);
+        return new_binary(ND_ASSIGN, lhs, rhs, start);
+    }
+
+    // Read "--i" as (i=i-1)
+    if (equal(tok, "--")) {
+        Token *start = tok;
+        Node *lhs = unary(rest, tok->next);
+        Node *rhs = new_sub(lhs, new_num(1, start), start);
+        return new_binary(ND_ASSIGN, lhs, rhs, start);
     }
     return postfix(rest, tok);
 }

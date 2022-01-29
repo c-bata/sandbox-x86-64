@@ -82,7 +82,8 @@ static bool is_keyword(Token *tok) {
 // Read a punctuator token from p and returns its length.
 static int read_punct(char *p) {
     if (startswith(p, "==") || startswith(p, "!=") ||
-        startswith(p, "<=") || startswith(p, ">="))
+        startswith(p, "<=") || startswith(p, ">=") ||
+        startswith(p, "++") || startswith(p, "--"))
         return 2;
 
     return ispunct(*p) ? 1 : 0;  // +-*&/(){}<>;

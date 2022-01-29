@@ -190,4 +190,9 @@ assert 99 'int main() { return "abc"[2]; }'
 assert 0 'int main() { return "abc"[3]; }'
 assert 4 'int main() { return sizeof("abc"); }'
 
+assert 1 'int main() { int i; i = 0; ++i; return i; }'
+assert 2 'int main() { int i; i = 0; ++i; ++i; return i; }'
+assert 1 'int main() { int i; i = 2; --i; return i; }'
+assert 0 'int main() { int i; i = 2; --i; --i; return i; }'
+
 echo Done

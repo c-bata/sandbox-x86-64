@@ -194,6 +194,11 @@ assert 8 'int main() { int x[3][4]; return sizeof(**x + 1); }'
 assert 8 'int main() { int x=1; return sizeof(x=2); }'
 assert 1 'int main() { int x=1; sizeof(x=2); return x; }'
 
+assert 1 'int main() { int i; i = 0; ++i; return i; }'
+assert 2 'int main() { int i; i = 0; ++i; ++i; return i; }'
+assert 1 'int main() { int i; i = 2; --i; return i; }'
+assert 0 'int main() { int i; i = 2; --i; --i; return i; }'
+
 # failure case
 echo ""
 echo "Failure case:"
