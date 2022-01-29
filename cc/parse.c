@@ -117,7 +117,7 @@ static Obj *new_string_literal(Token *tok) {
 // | add             = mul ("+" mul | "-" mul)*
 // | mul             = unary ("*" unary | "/" unary)*
 // | unary           = ("+" | "-" | "*" | "&" | "++" | "--")? unary | postfix
-// | postfix         = primary ("[" expr "]")*
+// | postfix         = primary ("[" expr "]" | "++" | "--")*
 // | primary         = num | str | ident ("(" (assign ("," assign)*)? ")")? | "(" expr ")" | "sizeof" unary
 // ↓
 // High Priority
@@ -566,12 +566,27 @@ static Node *unary(Token **rest, Token *tok) {
 
 static Node *postfix(Token **rest, Token *tok) {
     Node *node = primary(&tok, tok);
-    while (equal(tok, "[")) {
-        // a[i] is a syntax sugar of *(a+i)
+    while (equal(tok, "[") || equal(tok, "++") || equal(tok, "--")) {
         Token *start = tok;
-        Node *idx = expr(&tok, tok->next);
-        node = new_unary(ND_DEREF, new_add(node, idx, tok), start);
-        tok = skip(tok, "]");
+        if (equal(tok, "[")) {
+            // a[i] is a syntax sugar of *(a+i)
+            Token *start = tok;
+            Node *idx = expr(&tok, tok->next);
+            node = new_unary(ND_DEREF, new_add(node, idx, tok), start);
+            tok = skip(tok, "]");
+        } else if (equal(tok, "++")) {
+            // Read "x++" as ((x=x+1)-1)
+            Node *lhs = new_binary(ND_ASSIGN, node, new_add(node, new_num(1, start), start), start);
+            node = new_sub(lhs, new_num(1, start), start);
+            tok = tok->next;
+        } else if (equal(tok, "--")) {
+            // Read "x--" as ((x=x-1)+1)
+            Node *lhs = new_binary(ND_ASSIGN, node, new_sub(node, new_num(1, start), start), start);
+            node = new_add(lhs, new_num(1, start), start);
+            tok = tok->next;
+        } else {
+            error("parser: postfix() must not reach here.");
+        }
     }
     *rest = tok;
     return node;
