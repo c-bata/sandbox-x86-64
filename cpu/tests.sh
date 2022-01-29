@@ -39,3 +39,4 @@ check_asm_test "test/hello.bin" 20
 run_c_test test/test_virtual_memory.c
 
 echo Done
+

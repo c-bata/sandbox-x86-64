@@ -17,7 +17,7 @@ cpu: $(OBJS) $(HEADS)
 	$(ASM) -f bin -o $@ $<
 
 test: all $(OBJS)
-	./run-tests.sh
+	./tests.sh
 
 clean:
 	rm -rf cpu *.o test/*.o test/*.txt test/*.bin *.dSYM

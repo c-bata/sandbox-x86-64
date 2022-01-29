@@ -21,10 +21,6 @@ assert() {
   input="$2"
 
   ./9cc "$input" > $tmpdir/tmp.s || exit
-  if [ "$?" == 1 ]; then
-    return
-  fi
-
   gcc -o $tmpdir/tmp $tmpdir/tmp.s $tmpdir/tmp2.o
   $tmpdir/tmp
   actual="$?"

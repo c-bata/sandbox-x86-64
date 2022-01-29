@@ -17,7 +17,7 @@ astdump: tools/astdump.c tokenize.c parse.c type.c my_string.c
 $(OBJS): 9cc.h
 
 test: 9cc
-	./run-tests.sh
+	./tests.sh
 
 clean:
 	rm -rf 9cc astdump tokendump *.o *~ tmp* *.dSYM
