@@ -111,7 +111,7 @@ static Obj *new_string_literal(Token *tok) {
 // |                   | "while" "(" expr ")" stmt
 // |                   | "for" "(" expr? ";" expr? ";" expr? ")" stmt
 // | expr            = assign
-// | assign          = equality ("=" assign)?
+// | assign          = equality (("=" | "+=" | "-=" | "*=" | "/=") assign)?
 // | equality        = relational ("==" relational | "!=" relational)*
 // | relational      = add ("<" add | "<=" add | ">" add | ">=" add)*
 // | add             = mul ("+" mul | "-" mul)*
@@ -140,6 +140,9 @@ static Node *mul(Token **rest, Token *tok);
 static Node *unary(Token **rest, Token *tok);
 static Node *postfix(Token **rest, Token *tok);
 static Node *primary(Token **rest, Token *tok);
+
+static Node *new_add(Node *lhs, Node *rhs, Token *tok);
+static Node *new_sub(Node *lhs, Node *rhs, Token *tok);
 
 static char *get_ident(Token *tok) {
     if (tok->kind != TK_IDENT)
@@ -373,6 +376,30 @@ static Node *assign(Token **rest, Token *tok) {
     for (;;) {
         if (equal(tok, "=")) {
             node = new_binary(ND_ASSIGN, node, assign(&tok, tok->next), start);
+            continue;
+        }
+        // Read "x+=y" as "x=x+y"
+        if (equal(tok, "+=")) {
+            Node *rhs = new_add(node, assign(&tok, tok->next), start);
+            node = new_binary(ND_ASSIGN, node, rhs, start);
+            continue;
+        }
+        // Read "x-=y" as "x=x-y"
+        if (equal(tok, "-=")) {
+            Node *rhs = new_sub(node, assign(&tok, tok->next), start);
+            node = new_binary(ND_ASSIGN, node, rhs, start);
+            continue;
+        }
+        // Read "x*=y" as "x=x*y"
+        if (equal(tok, "*=")) {
+            Node *rhs = new_binary(ND_MUL, node, assign(&tok, tok->next), start);
+            node = new_binary(ND_ASSIGN, node, rhs, start);
+            continue;
+        }
+        // Read "x/=y" as "x=x/y"
+        if (equal(tok, "/=")) {
+            Node *rhs = new_binary(ND_DIV, node, assign(&tok, tok->next), start);
+            node = new_binary(ND_ASSIGN, node, rhs, start);
             continue;
         }
         *rest = tok;

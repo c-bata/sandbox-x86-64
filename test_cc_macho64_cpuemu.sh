@@ -193,4 +193,9 @@ assert 2 'int main() { int i; i = 0; ++i; ++i; return i; }'
 assert 1 'int main() { int i; i = 2; --i; return i; }'
 assert 0 'int main() { int i; i = 2; --i; --i; return i; }'
 
+assert 1 'int main() { int i; i = 0; i += 1; return i; }'
+assert 1 'int main() { int i; i = 2; i -= 1; return i; }'
+assert 20 'int main() { int i; i = 10; i *= 2; return i; }'
+assert 5 'int main() { int i; i = 10; i /= 2; return i; }'
+
 echo Done
