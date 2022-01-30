@@ -4,6 +4,7 @@ DOCKER_IMAGE = sandbox-x86-64
 all:
 	$(MAKE) 9cc -C cc
 	$(MAKE) cpu -C cpu
+	$(MAKE) cpu_validator -C cpu_validator
 
 .PHONY: test
 test:
