@@ -10,6 +10,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
+#include <stdbool.h>
 
 #define IS_ELF64(ehdr) \
   ((ehdr).e_ident[EI_MAG0] == ELFMAG0 && \
@@ -77,6 +78,15 @@ uint64_t parse_elf64(char* filepath) {
     return main_vmaddr;
 }
 
+uint8_t replace_instruction_code(int pid, uint64_t addr, uint8_t val) {
+    long original;
+    original = ptrace(PTRACE_PEEKTEXT, pid, addr, NULL);
+    fprintf(stderr, "PEEKTEXT: 0x%lx.\n", original);
+    ptrace(PTRACE_POKETEXT, pid, addr, ((original & 0xFFFFFFFFFFFFFF00) | val));
+    fprintf(stderr, "Breakpoint at 0x%lx.\n", addr);
+    return original & 0xFF;
+}
+
 int main(int argc, char *argv[], char *envp[]) {
     int pid, waitstatus;
     struct user_regs_struct regs;
@@ -95,14 +105,22 @@ int main(int argc, char *argv[], char *envp[]) {
     uint64_t main_vmaddr = parse_elf64(argv[1]);
     printf("main_vmaddr 0x%lx\n", main_vmaddr);
     waitpid(pid, &waitstatus, 0);
+
+    /*
+    uint8_t orig_code = replace_instruction_code(pid, main_vmaddr, 0xCC);
+    if (ptrace(PTRACE_CONT, pid, NULL, NULL)) {
+        perror("PTRACE_CONT");
+        exit(1);
+    }
+    waitpid(pid, &waitstatus, 0);
+    uint8_t code_0xCC = replace_instruction_code(pid, main_vmaddr, orig_code);
+    fprintf(stderr, "Must be 0xCC: actual=0x%x\n", code_0xCC);
+     */
+
+    bool entrypoint_found = false;
     while (WIFSTOPPED(waitstatus)) { /* tracer loop */
         if (ptrace(PTRACE_GETREGS, pid, NULL, &regs)) {
             perror("PTRACE_GETREGS");
-            exit(1);
-        }
-
-        if (main_vmaddr == (uint64_t) regs.rip) {
-            fprintf(stderr, "Found RIP!!");
             exit(1);
         }
 
@@ -118,5 +136,6 @@ int main(int argc, char *argv[], char *envp[]) {
         }
         waitpid(pid, &waitstatus, 0);
     }
+    fprintf(stderr, "Finished\n");
     exit(0);
 }
