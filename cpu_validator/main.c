@@ -78,6 +78,20 @@ uint64_t parse_elf64(char* filepath) {
     return main_vmaddr;
 }
 
+void dump_procfs_map(int pid) {
+    ssize_t buf[4096];
+    ssize_t nread;
+    char filename[16];
+    sprintf(filename, "/proc/%d/maps", pid);
+    int fd = open(filename, O_RDONLY);
+    if (fd < 0) {
+        perror("open");
+        exit(1);
+    }
+    while ((nread = read(fd, buf, sizeof(buf))) > 0)
+        write(1, buf, nread);
+}
+
 uint8_t replace_instruction_code(int pid, uint64_t addr, uint8_t val) {
     long original;
     original = ptrace(PTRACE_PEEKTEXT, pid, addr, NULL);
@@ -102,6 +116,7 @@ int main(int argc, char *argv[], char *envp[]) {
         execve(argv[1], argv + 1, envp);
     }
 
+    dump_procfs_map(pid);
     uint64_t main_vmaddr = parse_elf64(argv[1]);
     printf("main_vmaddr 0x%lx\n", main_vmaddr);
     waitpid(pid, &waitstatus, 0);
