@@ -89,7 +89,12 @@ Emulator* load_elf64(char* filepath) {
     fstat(fd, &sb);
 
     head = mmap(NULL, sb.st_size, PROT_READ, MAP_SHARED, fd, 0);
-    Emulator* emu = create_emu(0x0, 0x0);  // Set dummy RIP and RSP.
+
+    // Set dummy RIP address which is overwritten in parse_elf64().
+    // Here we set RSP as 0x8000000 since I found following interesting article
+    // that says the first 128MB(0x80000000) is for stack.
+    // https://eli.thegreenplace.net/2011/01/27/how-debuggers-work-part-2-breakpoints
+    Emulator* emu = create_emu(0x0, 0x8000000);
     parse_elf64(head, emu);
 
     munmap(head, sb.st_size);
