@@ -1,12 +1,9 @@
 CC = gcc
 CFLAGS = -std=c11 -Wall -g
 
-all: cpu_validator ndb
+all: cpu_validator
 
 cpu_validator: main.c
-	$(CC) $(CFLAGS) -o $@ $<
-
-ndb: ndb.c
 	$(CC) $(CFLAGS) -o $@ $<
 
 clean:
