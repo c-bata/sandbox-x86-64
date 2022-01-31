@@ -1,6 +1,9 @@
+#include <assert.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
+#include <signal.h>
 #include <unistd.h>
 #include <sys/ptrace.h>
 #include <sys/wait.h>
@@ -10,7 +13,6 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
-#include <stdbool.h>
 
 #define IS_ELF64(ehdr) \
   ((ehdr).e_ident[EI_MAG0] == ELFMAG0 && \
@@ -19,7 +21,7 @@
    (ehdr).e_ident[EI_MAG3] == ELFMAG3 && \
    (ehdr).e_ident[EI_CLASS] == ELFCLASS64)
 
-uint64_t find_main_sym_addr(void *head) {
+Elf64_Sym *lookup_symbol(void *head, char *name) {
     int i, j;
     Elf64_Ehdr *ehdr = head;
     Elf64_Shdr *shstr = head + ehdr->e_shoff + ehdr->e_shentsize * ehdr->e_shstrndx;
@@ -32,16 +34,15 @@ uint64_t find_main_sym_addr(void *head) {
             break;
     }
     for (i = 0; i < ehdr->e_shnum; i++) {
-        // Find main symbol
         Elf64_Shdr* sym = (head + ehdr->e_shoff + ehdr->e_shentsize * i);
         if (sym->sh_type != SHT_SYMTAB)
             continue;
         for (j=0; j<sym->sh_size / sym->sh_entsize; j++) {
             Elf64_Sym* symp = head + sym->sh_offset + sym->sh_entsize * j;
             char* symname = head + str->sh_offset + symp->st_name;
-            if (strcmp(symname, "main") != 0)
+            if (strcmp(symname, name) != 0)
                 continue;
-            return symp->st_value;
+            return symp;
         }
     }
     fprintf(stderr, "ELF 64 Loader: main symbol is not found.");
@@ -71,7 +72,7 @@ uint64_t parse_elf64(char* filepath) {
         fprintf(stderr, "This emulator only supports executable for x86-64.\n");
         exit(1);
     }
-    uint64_t main_vmaddr = find_main_sym_addr(head);
+    uint64_t main_vmaddr = lookup_symbol(head, "main")->st_value;
 
     munmap(head, sb.st_size);
     close(fd);
@@ -95,9 +96,13 @@ void dump_procfs_map(int pid) {
 uint8_t replace_instruction_code(int pid, uint64_t addr, uint8_t val) {
     long original;
     original = ptrace(PTRACE_PEEKTEXT, pid, addr, NULL);
-    fprintf(stderr, "PEEKTEXT: 0x%lx.\n", original);
-    ptrace(PTRACE_POKETEXT, pid, addr, ((original & 0xFFFFFFFFFFFFFF00) | val));
-    fprintf(stderr, "Breakpoint at 0x%lx.\n", addr);
+    if (original == -1) {
+        perror("PEEKTEXT");
+        exit(1);
+    }
+
+    fprintf(stderr, "PEEKTEXT(0x%lx): 0x%lx.\n", addr, original);
+    ptrace(PTRACE_POKETEXT, pid, addr, ((original & ~0xFF) | val));
     return original & 0xFF;
 }
 
@@ -115,22 +120,25 @@ int main(int argc, char *argv[], char *envp[]) {
         ptrace(PTRACE_TRACEME, 0, NULL, NULL);
         execve(argv[1], argv + 1, envp);
     }
-
-    dump_procfs_map(pid);
-    uint64_t main_vmaddr = parse_elf64(argv[1]);
-    printf("main_vmaddr 0x%lx\n", main_vmaddr);
     waitpid(pid, &waitstatus, 0);
+    assert(WIFSTOPPED(waitstatus));
+    assert(WSTOPSIG(waitstatus) == SIGTRAP);
+    assert(ptrace(PTRACE_GETREGS, pid, NULL, &regs) == 0);
 
-    /*
+    // RIPを見に行くと問題なく機械語列が取れる。
+    fprintf(stderr, "PEEKTEXT(RIP): 0x%lx.\n", ptrace(PTRACE_PEEKTEXT, pid, regs.rip, NULL));
+
+    // main_vmaddrでPEEKTEXTすると Input/output error になってしまう...
+    uint64_t main_vmaddr = parse_elf64(argv[1]);
+    fprintf(stderr, "Breakpoint at 0x%lx.\n", main_vmaddr);
     uint8_t orig_code = replace_instruction_code(pid, main_vmaddr, 0xCC);
-    if (ptrace(PTRACE_CONT, pid, NULL, NULL)) {
-        perror("PTRACE_CONT");
-        exit(1);
-    }
+    regs.rip -= 1;
+    assert(ptrace(PTRACE_SETREGS, pid, NULL, &regs) == 0);
+    assert(ptrace(PTRACE_CONT, pid, NULL, NULL) == 0);
+
     waitpid(pid, &waitstatus, 0);
     uint8_t code_0xCC = replace_instruction_code(pid, main_vmaddr, orig_code);
     fprintf(stderr, "Must be 0xCC: actual=0x%x\n", code_0xCC);
-     */
 
     bool entrypoint_found = false;
     while (WIFSTOPPED(waitstatus)) { /* tracer loop */
@@ -139,7 +147,10 @@ int main(int argc, char *argv[], char *envp[]) {
             exit(1);
         }
 
-        if (regs.rax == 0x2a) {
+        if ((regs.rip & 0x0FFF) == (main_vmaddr & 0x0FFF)) {
+            entrypoint_found = true;
+        }
+        if (entrypoint_found) {
             long int instr = ptrace(PTRACE_PEEKDATA, pid, regs.rip, 0); // read 4 bytes
             fprintf(stderr, "RIP=%llx, RAX=%llx, ORIG_RAX=%llx, instr=0x%lx\n",
                     regs.rip, regs.rax, regs.orig_rax, instr);
