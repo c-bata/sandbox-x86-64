@@ -58,7 +58,7 @@ void parse_elf64(void *head, Emulator* emu) {
         fprintf(stderr, "This is not ELF64 file.\n");
         exit(1);
     }
-    if (ehdr->e_machine != EM_X86_64) {
+    if (ehdr->e_type == ET_EXEC && ehdr->e_machine != EM_X86_64) {
         fprintf(stderr, "This emulator only supports executable for x86-64.\n");
         exit(1);
     }
