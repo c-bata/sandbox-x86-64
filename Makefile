@@ -28,4 +28,4 @@ docker-test:
 
 .PHONY: docker-shell
 docker-shell:
-	docker run -it --rm -v `PWD`:/sandbox -w /sandbox $(DOCKER_IMAGE) bash
+	docker run -it --rm --cap-add=SYS_PTRACE --security-opt="seccomp=unconfined" -v `PWD`:/sandbox -w /sandbox $(DOCKER_IMAGE) bash
