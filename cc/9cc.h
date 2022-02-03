@@ -28,9 +28,12 @@ struct Token {
     TokenKind kind;  // Token type
     Token *next;     // Next token
     int val;         // Used only if kind==TK_NUM
-    char *str;       // Used only if kind==TK_STR (must terminate with '\0')
     char *loc;       // Token location
     int len;         // Token length
+
+    // Used only if kind==TK_STR (must terminate with '\0')
+    char *str;
+    int strlen;
 };
 
 void error(char *fmt, ...);

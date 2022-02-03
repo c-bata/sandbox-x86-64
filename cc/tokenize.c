@@ -97,6 +97,24 @@ static void convert_keywords(Token *tok) {
             t->kind = TK_KEYWORD;
 }
 
+static int read_escape_char(char *p) {
+    // Escape sequences are defined using themselves here. This tautological definition
+    // works because the compiler that compiles our compiler knows what '\n' actually is.
+    // E.g. '\n' is implemented using '\n'.
+    switch (*p) {
+        case 'a': return '\a';
+        case 'b': return '\b';
+        case 't': return '\t';
+        case 'n': return '\n';
+        case 'v': return '\v';
+        case 'f': return '\f';
+        case 'r': return '\r';
+        // [GNU] \e for the ASCII escape character is a GNU C extension.
+        case 'e': return 27;
+        default: return *p;
+    }
+}
+
 Token *tokenize(char *p) {
     current_input = p;
     Token head;
@@ -132,15 +150,29 @@ Token *tokenize(char *p) {
         // Read string
         if (*p == '"') {
             char *start = p;
-            do {
-                p++;
+            int strlen = 1;  // for '\0'
+            while(*(++p) != '"') {
                 if (*p == '\n' || *p == '\0')
                     error_at(start, "unclosed string literal");
-            } while (*p != '"');
+                if (*p == '\\')
+                    p++;
+                strlen++;
+            }
             p++;  // skip a double quote.
 
+            char *buf = calloc(1, strlen);
+            int i = 0;
+            for (char *q = start + 1; q < p; q++) {
+                if (*q == '\\')
+                    buf[i++] = read_escape_char(++q);
+                else
+                    buf[i++] = *q;
+            }
+            buf[strlen-1] = '\0';
+
             Token *tok = new_token(TK_STR, start, p);
-            tok->str = my_strndup(start + 1, p - start - 2);
+            tok->str = buf;
+            tok->strlen = strlen;
             cur = cur->next = tok;
         }
 

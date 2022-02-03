@@ -87,7 +87,7 @@ static char *new_unique_name(void) {
 }
 
 static Obj *new_string_literal(Token *tok) {
-    Type *ty = array_of(ty_char, tok->len - 2 + 1);  // -2 for double quotes, +1 for '\0'
+    Type *ty = array_of(ty_char, tok->strlen);
     Obj *var = new_gvar(new_unique_name(), ty);
     var->init_data = tok->str;
     return var;

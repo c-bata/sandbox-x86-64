@@ -265,9 +265,8 @@ static void emit_data(Obj *prog) {
         fprintf(output_file, "  .global _%s\n", var->name);
         fprintf(output_file, "_%s:\n", var->name);
 #endif
-        if (var->ty->kind == TY_ARRAY && var->ty->base->kind == TY_CHAR) {
-            fprintf(output_file, "  .string \"%s\"\n", var->init_data);
-        } else if (var->init_data) {
+        if (var->init_data) {
+            // We use .byte here since .string cannot export escaped characters.
             for (int i = 0; i < var->ty->size; i++)
                 fprintf(output_file, "  .byte %d\n", var->init_data[i]);
         } else {
