@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
         error("error: no input program.");
     }
 
-    Token *tok = tokenize(argv[1]);
+    Token *tok = tokenize_file(argv[1]);
     Obj *prog = parse(tok);
 
     FILE* fout = stdout;

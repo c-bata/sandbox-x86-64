@@ -40,7 +40,7 @@ void error(char *fmt, ...);
 void error_at(char *loc, char *fmt, ...);
 void error_tok(Token *tok, char *fmt, ...);
 
-Token *tokenize(char *p);
+Token *tokenize_file(char *p);
 
 //
 // parse.c

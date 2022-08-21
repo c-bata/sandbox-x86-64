@@ -115,7 +115,7 @@ static int read_escape_char(char *p) {
     }
 }
 
-Token *tokenize(char *p) {
+Token *tokenize_file(char *p) {
     current_input = p;
     Token head;
     head.next = NULL;
@@ -185,7 +185,7 @@ Token *tokenize(char *p) {
         }
         error_at(p, "tokenizer error: '%c'\n", *p);
     }
-    cur = cur->next = new_token(TK_EOF, p, p);
+    cur->next = new_token(TK_EOF, p, p);
     convert_keywords(head.next);
     return head.next;
 }
